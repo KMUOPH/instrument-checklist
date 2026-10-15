@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>治療室點班單</title>
+  <link rel="icon" type="image/png" href="logo.png">
+  <link rel="apple-touch-icon" href="logo.png">
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* 螢幕顯示模式：隱藏列印區 */
@@ -11,16 +13,29 @@
       #print-area { display: none; }
     }
     
-    /* 列印模式：隱藏操作介面，設定A4滿版 */
+    /* 列印模式：隱藏操作介面，設定A4滿版與置中 */
     @media print {
       body { background-color: white; padding: 0; margin: 0; }
       #ui-area { display: none !important; }
       #print-area { display: block; width: 100%; }
-      @page { size: A4; margin: 8mm; } 
+      @page { size: A4; margin: 8mm auto; } 
       
+      /* 單頁容器：負責將內容完美置中 */
+      .print-page {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 97vh; /* 抓取接近單頁的最大高度 */
+        width: 100%;
+        box-sizing: border-box;
+      }
+      .page-break { page-break-after: always; }
+      
+      /* 表格本體 */
       .print-table { 
-        width: 100%; 
-        height: 96vh; 
+        width: 94%; /* 留出左右邊界，達到完美水平置中 */
+        height: 100%; /* 完美垂直置中並自動延展列高 */
+        margin: 0 auto; 
         border-collapse: collapse; 
         table-layout: fixed; 
         font-size: 13pt; 
@@ -42,7 +57,6 @@
       .col-qty { width: 8%; }
       
       .signature-row td { height: 50px; vertical-align: bottom; padding-bottom: 5px;}
-      .page-break { page-break-after: always; }
     }
   </style>
 </head>
@@ -97,7 +111,6 @@
             <th class="border p-2 w-20">編號</th>
             <th class="border p-2">品項名稱</th>
             <th class="border p-2 w-20">數量</th>
-            <!-- 放寬操作欄位確保並排 -->
             <th class="border p-2 w-48">操作</th>
           </tr>
         </thead>
@@ -230,7 +243,6 @@
       }
     }
 
-    // 智慧型上下移動邏輯
     function moveItem(index, direction) {
       if (index + direction < 0 || index + direction >= items.length) return;
 
@@ -239,16 +251,14 @@
       const sourceCat = sourceItem['類別'];
       const targetCat = targetItem['類別'];
 
-      if (sourceCat !== targetCat) return; // 避免跨類別移動
+      if (sourceCat !== targetCat) return; 
 
       const sourceGrid = sourceItem['編號'] || '';
       const targetGrid = targetItem['編號'] || '';
 
       if (sourceGrid === targetGrid) {
-        // 情況 1：同編號群組內移動（單純交換這兩個品項的位置）
         [items[index], items[index + direction]] = [items[index + direction], items[index]];
       } else {
-        // 情況 2：遇到不同編號（群組大搬風，對調兩個群組的編號）
         if (sourceGrid !== '' && targetGrid !== '') {
             items.forEach(item => {
               if (item['類別'] === sourceCat) {
@@ -262,17 +272,14 @@
               }
             });
         } else {
-            // 若其中一個沒有編號，則單純交換位置
             [items[index], items[index + direction]] = [items[index + direction], items[index]];
         }
       }
 
-      // 重新分配底層排序號碼，確保自動排序時能記住相對位置
       items.forEach((item, idx) => item['排序'] = idx + 1);
       autoSort(); 
     }
 
-    // 更新自動排序：增加同號防錯機制
     function autoSort() {
       items.sort((a, b) => {
         if (a['類別'] !== b['類別']) return a['類別'] === '器械' ? -1 : 1;
@@ -282,13 +289,11 @@
         const isNaNA = isNaN(numA);
         const isNaNB = isNaN(numB);
         
-        // 若都沒有編號，維持當前陣列順序
         if (isNaNA && isNaNB) return (a['排序'] || 0) - (b['排序'] || 0);
         if (isNaNA) return 1;
         if (isNaNB) return -1;
         if (numA !== numB) return numA - numB;
         
-        // 若編號相同，依據方才賦予的連續排序值維持內部順序
         return (a['排序'] || 0) - (b['排序'] || 0);
       });
       editingIndex = -1;
@@ -329,7 +334,6 @@
             <td class="border p-2">${item['品項']}</td>
             <td class="border p-2 text-center">${item['數量']}</td>
             <td class="border p-2">
-              <!-- 加入上下移動的箭頭按鈕 -->
               <div class="flex justify-center items-center gap-3">
                 <button onclick="moveItem(${index}, -1)" class="text-gray-400 hover:text-gray-800 font-bold px-1 transition" title="上移">↑</button>
                 <button onclick="moveItem(${index}, 1)" class="text-gray-400 hover:text-gray-800 font-bold px-1 transition" title="下移">↓</button>
@@ -413,7 +417,8 @@
         }
 
         const page = document.createElement('div');
-        page.className = (w < selectedWeeks - 1) ? 'page-break' : '';
+        // 為每頁加上置中容器樣式
+        page.className = 'print-page' + ((w < selectedWeeks - 1) ? ' page-break' : '');
         
         let tableHTML = `
           <table class="print-table">
