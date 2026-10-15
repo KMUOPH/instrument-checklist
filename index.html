@@ -21,33 +21,34 @@
       #ui-area { display: none !important; }
       #print-area { display: block; width: 100%; }
       
-      /* 終極解法：強制關閉瀏覽器所有預設邊界，避免首頁偏移 Bug */
+      /* 強制關閉瀏覽器所有預設邊界，徹底防止首頁偏移 Bug */
       @page { size: A4; margin: 0mm !important; } 
       
-      /* 實體 A4 畫布：210mm x 297mm，絕對不會有誤差 */
+      /* 實體 A4 畫布：使用 Flexbox 達成絕對的垂直與水平置中 */
       .print-page {
         width: 210mm;
-        height: 297mm; 
+        height: 296mm; /* 微調高度防止溢出換頁 */
         position: relative; 
         box-sizing: border-box;
         page-break-after: always;
         page-break-inside: avoid;
         overflow: hidden; 
         background-color: white;
+        display: flex;
+        flex-direction: column;
+        align-items: center; /* ✨ 關鍵：絕對垂直置中 */
+        justify-content: center; /* ✨ 關鍵：絕對水平置中 */
       }
       
-      /* 最後一頁取消換頁，消滅最後的空白紙 */
       .print-page.last-page {
         page-break-after: auto; 
       }
 
-      /* 奇偶頁實體內縮：上下絕對都是 10mm，左右依據雙面列印對稱交替 */
-      /* 奇數頁(正)：上 10mm, 右 10mm, 下 10mm, 左 20mm */
-      .page-odd { padding: 10mm 10mm 10mm 20mm; }
-      /* 偶數頁(背)：上 10mm, 右 20mm, 下 10mm, 左 10mm */
-      .page-even { padding: 10mm 20mm 10mm 10mm; }
+      /* 奇偶頁實體內縮：上下不設 padding (交給置中)，只控制左右對稱裝訂線 */
+      .page-odd { padding-left: 20mm; padding-right: 10mm; }
+      .page-even { padding-left: 10mm; padding-right: 20mm; }
 
-      /* 打洞對齊小三角形 */
+      /* 打洞對齊小三角形 (安全繪製於 20mm 的裝訂區內) */
       .punch-mark {
         position: absolute;
         top: 50%; 
@@ -62,7 +63,8 @@
       
       .print-table { 
         width: 100%; 
-        height: 100%; 
+        /* ✨ 關鍵：固定表格高度，(296-275)/2 = 上下自動完美對稱 10.5mm 邊界 */
+        height: 275mm; 
         border-collapse: collapse; 
         table-layout: fixed; 
         font-size: 12pt; 
@@ -82,6 +84,7 @@
       .col-name { width: 18%; }
       .col-qty { width: 10%; }
       
+      /* 簽名欄高度 */
       .signature-row td { height: 40px; vertical-align: middle; padding-bottom: 0;}
     }
   </style>
@@ -96,17 +99,18 @@
       <span id="status-msg" class="text-xs font-medium text-gray-600 bg-gray-100 border px-2 py-0.5 rounded-full border-transparent">載入中...</span>
     </div>
     
-    <div class="flex flex-wrap gap-3 items-center mb-5 bg-gray-50 p-3 rounded border">
+    <!-- ✨ 修正高低差：使用 items-end 確保底部絕對切齊 ✨ -->
+    <div class="flex items-end gap-4 mb-5 bg-gray-50 p-3 rounded border">
       
       <!-- 起始日期 -->
-      <div class="flex flex-col gap-1">
-        <label class="text-[10px] font-bold text-gray-500 leading-none">起始日期 (週一)</label>
+      <div class="flex flex-col gap-1.5">
+        <label class="text-[11px] font-bold text-gray-500 leading-none">起始日期 (週一)</label>
         <input type="date" id="start-date" onchange="checkMonday()" class="border border-gray-300 px-2 rounded h-8 w-32 text-xs">
       </div>
       
-      <!-- 單列週數膠囊陣列 (高度 h-8 對齊起始日期) -->
-      <div class="flex flex-col gap-1 ml-1">
-        <label class="text-[10px] font-bold text-transparent leading-none">.</label>
+      <!-- 單列週數膠囊陣列 -->
+      <div class="flex flex-col gap-1.5 ml-1">
+        <label class="text-[11px] font-bold text-gray-500 leading-none">列印週數</label>
         <div class="flex gap-1" id="week-pills">
           <button onclick="setWeeks(2)" class="week-btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-3 h-8 rounded text-xs font-medium transition flex items-center justify-center">2週</button>
           <button onclick="setWeeks(4)" class="week-btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-3 h-8 rounded text-xs font-medium transition flex items-center justify-center">4週</button>
@@ -115,7 +119,8 @@
         </div>
       </div>
 
-      <div class="ml-auto flex gap-2 items-end">
+      <!-- 右側按鈕群 (設定 h-8，底部切齊) -->
+      <div class="ml-auto flex gap-2">
         <button onclick="loadData()" class="bg-gray-500 hover:bg-gray-600 text-white font-bold px-3 h-8 rounded transition shadow text-xs">重新載入</button>
         <button onclick="generatePrint()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 h-8 rounded transition shadow text-xs">列印</button>
       </div>
@@ -157,7 +162,6 @@
               <input type="number" id="new-qty" class="w-full p-1 border rounded text-center text-xs" placeholder="數量">
             </td>
             <td class="border p-1">
-              <!-- 統一藍色系，等寬按鈕 (flex-1) -->
               <div class="flex justify-center items-center gap-1">
                 <button onclick="addItem()" class="bg-blue-600 text-white flex-1 py-1 rounded hover:bg-blue-700 transition shadow-sm font-bold text-xs whitespace-nowrap">新增</button>
                 <button onclick="autoSort()" class="bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 font-bold flex-1 py-1 rounded transition shadow-sm whitespace-nowrap text-xs" title="排序">
@@ -376,7 +380,6 @@
             <td class="border p-1"><input type="text" id="edit-name-${index}" value="${item['品項']}" class="w-full p-1 border rounded text-xs"></td>
             <td class="border p-1"><input type="number" id="edit-qty-${index}" value="${item['數量']}" class="w-full text-center p-1 border rounded text-xs"></td>
             <td class="border p-1">
-              <!-- 編輯模式的儲存與取消按鈕也統一為藍灰配色 -->
               <div class="flex justify-center items-center gap-1">
                 <button onclick="saveEdit(${index})" class="bg-blue-600 text-white flex-1 py-1 rounded hover:bg-blue-700 shadow-sm text-xs font-bold whitespace-nowrap">儲存</button>
                 <button onclick="cancelEdit()" class="bg-gray-400 text-white flex-1 py-1 rounded hover:bg-gray-500 shadow-sm text-xs whitespace-nowrap">取消</button>
