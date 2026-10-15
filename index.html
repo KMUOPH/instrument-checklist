@@ -16,28 +16,26 @@
       body { background-color: white; padding: 0; margin: 0; }
       #ui-area { display: none !important; }
       #print-area { display: block; width: 100%; }
-      @page { size: A4; margin: 5mm; } /* 縮小邊界確保單頁塞入 */
+      @page { size: A4; margin: 5mm; } 
       
       .print-table { 
         width: 100%; 
         border-collapse: collapse; 
         table-layout: fixed; 
-        font-size: 12pt; /* 略微縮小字體以防超出單頁 */
+        font-size: 12pt; 
         page-break-inside: avoid;
       }
       .print-table th, .print-table td { 
         border: 1px solid black; 
         text-align: center; 
-        padding: 4px 2px; /* 縮小上下間距確保單頁塞入 */
+        padding: 4px 2px; 
       }
       .print-table th { background-color: #f9fafb; font-weight: normal; }
       
-      /* 第一欄(格子)與第二欄(品項)的寬度微調 */
       .col-grid { width: 8%; }
       .col-name { width: 22%; }
       .col-qty { width: 8%; }
       
-      /* 簽名欄高度 */
       .signature-row td { height: 45px; vertical-align: bottom; padding-bottom: 5px;}
       .page-break { page-break-after: always; }
     }
@@ -56,32 +54,39 @@
     
     <!-- 控制面板 -->
     <div class="flex flex-wrap gap-6 items-end mb-8 bg-gray-50 p-5 rounded border">
-      <div>
-        <label class="block text-sm font-bold text-gray-700 mb-2">起始日期</label>
-        <input type="date" id="start-date" class="border border-gray-300 p-2 rounded w-40">
+      <div class="flex flex-col gap-2">
+        <label class="text-sm font-bold text-gray-700 leading-none">起始日期</label>
+        <input type="date" id="start-date" class="border border-gray-300 px-3 rounded h-[38px] w-40 box-border text-sm">
       </div>
       
-      <div>
-        <label class="block text-sm font-bold text-gray-700 mb-2">列印週數</label>
-        <div class="flex gap-2" id="week-pills">
-          <button onclick="setWeeks(2)" class="week-btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-4 py-1.5 rounded-full text-sm font-medium transition">2週</button>
-          <button onclick="setWeeks(4)" class="week-btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-4 py-1.5 rounded-full text-sm font-medium transition">4週</button>
-          <button onclick="setWeeks(6)" class="week-btn bg-blue-600 text-white px-4 py-1.5 rounded-full text-sm font-medium transition" data-active="true">6週</button>
-          <button onclick="setWeeks(8)" class="week-btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-4 py-1.5 rounded-full text-sm font-medium transition">8週</button>
+      <div class="flex flex-col gap-2">
+        <label class="text-sm font-bold text-gray-700 leading-none">列印週數</label>
+        <div class="flex gap-2 items-center h-[38px]" id="week-pills">
+          <button onclick="setWeeks(2)" class="week-btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-4 h-[30px] rounded-full text-sm font-medium transition flex items-center justify-center">2週</button>
+          <button onclick="setWeeks(4)" class="week-btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-4 h-[30px] rounded-full text-sm font-medium transition flex items-center justify-center">4週</button>
+          <button onclick="setWeeks(6)" class="week-btn bg-blue-600 text-white px-4 h-[30px] rounded-full text-sm font-medium transition flex items-center justify-center shadow-sm" data-active="true">6週</button>
+          <button onclick="setWeeks(8)" class="week-btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-4 h-[30px] rounded-full text-sm font-medium transition flex items-center justify-center">8週</button>
         </div>
       </div>
 
       <div class="ml-auto flex gap-3">
-        <button onclick="loadData()" class="bg-gray-500 hover:bg-gray-600 text-white font-bold px-4 py-2 rounded transition shadow">
+        <button onclick="loadData()" class="bg-gray-500 hover:bg-gray-600 text-white font-bold px-4 h-[38px] rounded transition shadow text-sm">
           重新載入
         </button>
-        <button onclick="generatePrint()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 py-2 rounded transition shadow">
+        <button onclick="generatePrint()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 h-[38px] rounded transition shadow text-sm">
           列印
         </button>
       </div>
     </div>
 
-    <h2 class="text-xl font-bold mb-4 text-gray-800">資料編輯區</h2>
+    <!-- 編輯區標題與排序按鈕 -->
+    <div class="flex justify-between items-end mb-4">
+      <h2 class="text-xl font-bold text-gray-800">資料編輯區</h2>
+      <button onclick="autoSort()" class="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 font-bold px-4 py-1.5 rounded text-sm transition shadow-sm">
+        ✨ 依類別與編號自動排序
+      </button>
+    </div>
+
     <div class="overflow-x-auto">
       <table class="w-full border-collapse border border-gray-300 text-sm">
         <thead class="bg-gray-200">
@@ -90,7 +95,7 @@
             <th class="border p-2 w-20">編號</th>
             <th class="border p-2">品項名稱</th>
             <th class="border p-2 w-20">數量</th>
-            <th class="border p-2 w-32">操作</th>
+            <th class="border p-2 w-40">操作</th>
           </tr>
         </thead>
         <tbody id="editor-tbody">
@@ -99,19 +104,19 @@
         <tfoot class="bg-gray-100">
           <tr>
             <td class="border p-1">
-              <select id="new-cat" class="w-full p-1 border rounded"><option>器械</option><option>其他</option></select>
+              <select id="new-cat" class="w-full p-2 border rounded text-center"><option>器械</option><option>其他</option></select>
             </td>
             <td class="border p-1">
-              <input type="text" id="new-grid" class="w-full p-1 border rounded text-center" placeholder="如: 1">
+              <input type="text" id="new-grid" class="w-full p-2 border rounded text-center" placeholder="如: 1">
             </td>
             <td class="border p-1">
-              <input type="text" id="new-name" class="w-full p-1 border rounded" placeholder="輸入品項名稱">
+              <input type="text" id="new-name" class="w-full p-2 border rounded" placeholder="輸入品項名稱">
             </td>
             <td class="border p-1">
-              <input type="number" id="new-qty" class="w-full p-1 border rounded text-center" placeholder="數量">
+              <input type="number" id="new-qty" class="w-full p-2 border rounded text-center" placeholder="數量">
             </td>
             <td class="border p-1 text-center">
-              <button onclick="addItem()" class="bg-indigo-500 text-white px-4 py-1 rounded hover:bg-indigo-600 transition shadow-sm">新增</button>
+              <button onclick="addItem()" class="bg-indigo-500 text-white px-6 py-2 rounded hover:bg-indigo-600 transition shadow-sm font-bold">新增</button>
             </td>
           </tr>
         </tfoot>
@@ -124,16 +129,16 @@
 
   <!-- ================= 核心邏輯 ================= -->
   <script>
-    // 您專屬的 Google Apps Script 網址
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzwGKX1VXJY1EaWulhxdKUB-NUnIR1oSJwHa2xQFezah8-QkpUABkOIWpq6xsx4Tic_/exec';
     let items = [];
-    let selectedWeeks = 6; // 預設列印 6 週
+    let selectedWeeks = 6; 
+    let editingIndex = -1; // 記錄目前正在編輯哪一個項目
 
-    // 初始化日期：設定為當週星期一
+    // 初始化日期
     function initDate() {
       const d = new Date();
-      const day = d.getDay() || 7; // 將週日(0)轉換為7
-      d.setDate(d.getDate() - day + 1); // 減去天數回到週一
+      const day = d.getDay() || 7; 
+      d.setDate(d.getDate() - day + 1); 
       
       const yyyy = d.getFullYear();
       const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -141,20 +146,20 @@
       document.getElementById('start-date').value = `${yyyy}-${mm}-${dd}`;
     }
 
-    // 設定週數膠囊樣式與數值
+    // 設定週數膠囊
     function setWeeks(weeks) {
       selectedWeeks = weeks;
       const btns = document.querySelectorAll('.week-btn');
       btns.forEach(btn => {
         if (btn.innerText.includes(weeks)) {
-          btn.className = "week-btn bg-blue-600 text-white px-4 py-1.5 rounded-full text-sm font-medium transition shadow-sm";
+          btn.className = "week-btn bg-blue-600 text-white px-4 h-[30px] rounded-full text-sm font-medium transition flex items-center justify-center shadow-sm";
         } else {
-          btn.className = "week-btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-4 py-1.5 rounded-full text-sm font-medium transition";
+          btn.className = "week-btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-4 h-[30px] rounded-full text-sm font-medium transition flex items-center justify-center";
         }
       });
     }
 
-    // 更新狀態文字 UI
+    // 更新狀態
     function setStatus(msg, isError = false) {
       const el = document.getElementById('status-msg');
       el.innerText = msg;
@@ -167,14 +172,14 @@
       }
     }
 
-    // 1. 從 Google Sheets 讀取資料
+    // 1. 讀取資料
     async function loadData() {
       setStatus("讀取中...");
       try {
         const response = await fetch(SCRIPT_URL);
         const data = await response.json();
-        // 依照「排序」欄位重新排序
         items = data.sort((a, b) => parseInt(a['排序'] || 0) - parseInt(b['排序'] || 0));
+        editingIndex = -1;
         renderEditor();
         setStatus("已同步");
       } catch (error) {
@@ -183,12 +188,10 @@
       }
     }
 
-    // 2. 儲存資料到 Google Sheets
+    // 2. 儲存資料
     async function saveData() {
       setStatus("儲存中...");
-      // 確保排序欄位正確對應陣列順序
       items.forEach((item, index) => item['排序'] = index + 1);
-      
       try {
         await fetch(SCRIPT_URL, {
           method: 'POST',
@@ -203,31 +206,95 @@
       }
     }
 
+    // 自動排序功能
+    function autoSort() {
+      items.sort((a, b) => {
+        // 1. 類別優先：器械排前面
+        if (a['類別'] !== b['類別']) {
+          return a['類別'] === '器械' ? -1 : 1;
+        }
+        // 2. 編號排序
+        const valA = a['編號'] || a['格子編號'] || '';
+        const valB = b['編號'] || b['格子編號'] || '';
+        const numA = parseInt(valA, 10);
+        const numB = parseInt(valB, 10);
+        
+        // 若沒有編號，排到最後
+        if (isNaN(numA) && isNaN(numB)) return 0;
+        if (isNaN(numA)) return 1;
+        if (isNaN(numB)) return -1;
+        
+        return numA - numB;
+      });
+      editingIndex = -1;
+      saveData();
+    }
+
     // 3. 渲染編輯器表格
     function renderEditor() {
       const tbody = document.getElementById('editor-tbody');
       tbody.innerHTML = '';
       items.forEach((item, index) => {
+        const gridVal = item['編號'] || item['格子編號'] || '';
         const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td class="border p-1"><input type="text" value="${item['類別']}" onchange="updateItem(${index}, '類別', this.value)" class="w-full text-center p-1 bg-transparent"></td>
-          <td class="border p-1"><input type="text" value="${item['格子編號'] || ''}" onchange="updateItem(${index}, '格子編號', this.value)" class="w-full text-center p-1 bg-transparent"></td>
-          <td class="border p-1"><input type="text" value="${item['品項']}" onchange="updateItem(${index}, '品項', this.value)" class="w-full p-1 bg-transparent"></td>
-          <td class="border p-1"><input type="number" value="${item['數量']}" onchange="updateItem(${index}, '數量', this.value)" class="w-full text-center p-1 bg-transparent"></td>
-          <td class="border p-1 text-center space-x-1">
-            <button onclick="moveItem(${index}, -1)" class="bg-gray-200 px-2 py-1 rounded hover:bg-gray-300">↑</button>
-            <button onclick="moveItem(${index}, 1)" class="bg-gray-200 px-2 py-1 rounded hover:bg-gray-300">↓</button>
-            <button onclick="deleteItem(${index})" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">刪除</button>
-          </td>
-        `;
+        
+        // 判斷是否為編輯模式
+        if (editingIndex === index) {
+          tr.className = "bg-yellow-50";
+          tr.innerHTML = `
+            <td class="border p-2">
+              <select id="edit-cat-${index}" class="w-full p-1 border rounded text-center">
+                <option value="器械" ${item['類別']==='器械'?'selected':''}>器械</option>
+                <option value="其他" ${item['類別']==='其他'?'selected':''}>其他</option>
+              </select>
+            </td>
+            <td class="border p-2"><input type="text" id="edit-grid-${index}" value="${gridVal}" class="w-full text-center p-1 border rounded"></td>
+            <td class="border p-2"><input type="text" id="edit-name-${index}" value="${item['品項']}" class="w-full p-1 border rounded"></td>
+            <td class="border p-2"><input type="number" id="edit-qty-${index}" value="${item['數量']}" class="w-full text-center p-1 border rounded"></td>
+            <td class="border p-2 text-center space-x-1">
+              <button onclick="saveEdit(${index})" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 shadow-sm text-sm font-bold">儲存</button>
+              <button onclick="cancelEdit()" class="bg-gray-400 text-white px-3 py-1 rounded hover:bg-gray-500 shadow-sm text-sm">取消</button>
+            </td>
+          `;
+        } else {
+          tr.className = "hover:bg-gray-50";
+          tr.innerHTML = `
+            <td class="border p-2 text-center">${item['類別']}</td>
+            <td class="border p-2 text-center font-bold text-blue-600">${gridVal}</td>
+            <td class="border p-2">${item['品項']}</td>
+            <td class="border p-2 text-center">${item['數量']}</td>
+            <td class="border p-2 text-center space-x-1">
+              <button onclick="moveItem(${index}, -1)" class="bg-gray-200 px-2 py-1 rounded hover:bg-gray-300 text-sm">↑</button>
+              <button onclick="moveItem(${index}, 1)" class="bg-gray-200 px-2 py-1 rounded hover:bg-gray-300 text-sm">↓</button>
+              <button onclick="enableEdit(${index})" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 shadow-sm text-sm">編輯</button>
+              <button onclick="deleteItem(${index})" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 shadow-sm text-sm">刪除</button>
+            </td>
+          `;
+        }
         tbody.appendChild(tr);
       });
     }
 
-    // 編輯與操作功能
-    function updateItem(index, key, value) { 
-      items[index][key] = value; 
-      saveData(); 
+    // 編輯控制功能
+    function enableEdit(index) {
+      editingIndex = index;
+      renderEditor();
+    }
+
+    function cancelEdit() {
+      editingIndex = -1;
+      renderEditor();
+    }
+
+    function saveEdit(index) {
+      items[index]['類別'] = document.getElementById(`edit-cat-${index}`).value;
+      const newGrid = document.getElementById(`edit-grid-${index}`).value;
+      items[index]['編號'] = newGrid;
+      items[index]['格子編號'] = newGrid; // 相容 Apps Script 舊設定
+      items[index]['品項'] = document.getElementById(`edit-name-${index}`).value;
+      items[index]['數量'] = document.getElementById(`edit-qty-${index}`).value;
+      editingIndex = -1;
+      saveData();
     }
     
     function addItem() {
@@ -241,7 +308,8 @@
       items.push({
         '類別': cat, 
         '排序': items.length + 1, 
-        '格子編號': grid, 
+        '編號': grid, 
+        '格子編號': grid, // 相容 Apps Script 舊設定
         '品項': name, 
         '數量': qty
       });
@@ -263,6 +331,7 @@
       const temp = items[index];
       items[index] = items[index + direction];
       items[index + direction] = temp;
+      editingIndex = -1; // 移動時關閉編輯狀態
       saveData();
     }
 
@@ -271,7 +340,6 @@
       const startDateInput = document.getElementById('start-date').value;
       if(!startDateInput) return alert('請先選擇起始日期');
       
-      // 無論選擇何日，列印時皆校正為該週星期一
       let d = new Date(startDateInput);
       const day = d.getDay() || 7; 
       d.setDate(d.getDate() - day + 1); 
@@ -283,7 +351,6 @@
         const weekStart = new Date(d);
         weekStart.setDate(weekStart.getDate() + (w * 7));
         
-        // 產生週一至週五的日期標籤 (MM/DD)
         let dates = [];
         for(let i = 0; i < 5; i++) {
            let cur = new Date(weekStart);
@@ -316,7 +383,6 @@
             <tbody>
         `;
 
-        // 處理「器械」類別
         const instruments = items.filter(i => i['類別'] === '器械');
         tableHTML += `<tr><td colspan="8" style="font-size: 13pt; letter-spacing: 1em;">器械</td></tr>`;
         
@@ -324,12 +390,11 @@
         let gridSpan = 0;
         
         instruments.forEach((item, idx) => {
-           let gridNum = item['格子編號'] || '';
+           let gridNum = item['編號'] || item['格子編號'] || '';
            tableHTML += `<tr>`;
            
-           // 判斷是否需要合併儲存格 (Rowspan)
            if(gridNum !== currentGrid || gridNum === "") {
-             gridSpan = instruments.filter(i => (i['格子編號'] || '') === gridNum && gridNum !== "").length;
+             gridSpan = instruments.filter(i => (i['編號'] || i['格子編號'] || '') === gridNum && gridNum !== "").length;
              if(gridSpan === 0) gridSpan = 1;
              tableHTML += `<td rowspan="${gridSpan}">${gridNum}</td>`;
              currentGrid = gridNum;
@@ -340,7 +405,6 @@
                          <td></td><td></td><td></td><td></td><td></td></tr>`;
         });
 
-        // 處理「其他」類別
         const others = items.filter(i => i['類別'] !== '器械');
         tableHTML += `<tr><td colspan="8" style="font-size: 13pt; letter-spacing: 1em;">其他品項</td></tr>`;
         
@@ -352,7 +416,6 @@
                          </tr>`;
         });
 
-        // 簽名欄
         tableHTML += `
             <tr class="signature-row">
               <td colspan="3" style="font-size: 16pt; letter-spacing: 1em;">簽名</td>
@@ -365,11 +428,9 @@
         printArea.appendChild(page);
       }
 
-      // 觸發列印
       setTimeout(() => { window.print(); }, 300);
     }
 
-    // 網頁載入時初始化日期並讀取資料
     window.onload = function() {
       initDate();
       loadData();
