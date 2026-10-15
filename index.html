@@ -20,7 +20,7 @@
       
       .print-table { 
         width: 100%; 
-        height: 96vh; /* 強制表格總高度接近一整頁，瀏覽器會自動把剩下的高度「平分」給每一個品項列 */
+        height: 96vh; 
         border-collapse: collapse; 
         table-layout: fixed; 
         font-size: 13pt; 
@@ -34,8 +34,6 @@
       }
       
       .print-table th { background-color: #f9fafb; font-weight: normal; }
-      
-      /* 固定標題列高度 */
       .print-table thead th { height: 35px; }
       .category-title { height: 35px; }
       
@@ -43,7 +41,6 @@
       .col-name { width: 22%; }
       .col-qty { width: 8%; }
       
-      /* 簽名欄固定高度 */
       .signature-row td { height: 50px; vertical-align: bottom; padding-bottom: 5px;}
       .page-break { page-break-after: always; }
     }
@@ -54,13 +51,11 @@
   <!-- ================= 操作介面區 ================= -->
   <div id="ui-area" class="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-md">
     
-    <!-- 標題與狀態 -->
     <div class="flex items-center gap-4 mb-6">
       <h1 class="text-3xl font-bold text-gray-800">治療室點班單系統</h1>
       <span id="status-msg" class="text-sm font-medium text-gray-600 bg-gray-100 px-3 py-1 rounded-full border">讀取中...</span>
     </div>
     
-    <!-- 控制面板 -->
     <div class="flex flex-wrap gap-6 items-end mb-8 bg-gray-50 p-5 rounded border">
       <div class="flex flex-col gap-2">
         <label class="text-sm font-bold text-gray-700 leading-none">起始日期 (週一)</label>
@@ -87,7 +82,6 @@
       </div>
     </div>
 
-    <!-- 編輯區標題與排序按鈕 -->
     <div class="flex justify-between items-end mb-4">
       <h2 class="text-xl font-bold text-gray-800">資料編輯區</h2>
       <button onclick="autoSort()" class="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 font-bold px-4 py-1.5 rounded text-sm transition shadow-sm">
@@ -142,7 +136,6 @@
     let selectedWeeks = 6; 
     let editingIndex = -1;
 
-    // 初始化日期
     function initDate() {
       const d = new Date();
       const day = d.getDay() || 7; 
@@ -154,7 +147,6 @@
       document.getElementById('start-date').value = `${yyyy}-${mm}-${dd}`;
     }
 
-    // 檢查是否為星期一，若否則自動校正
     function checkMonday() {
       const input = document.getElementById('start-date');
       if (!input.value) return;
@@ -162,11 +154,10 @@
       let d = new Date(input.value);
       const day = d.getDay();
       
-      // 如果不是星期一 (1)
       if (day !== 1) {
         alert("起始日期必須是星期一！系統已自動為您校正。");
-        const dayCalc = day || 7; // 將週日(0)視為7
-        d.setDate(d.getDate() - dayCalc + 1); // 退回當週的星期一
+        const dayCalc = day || 7; 
+        d.setDate(d.getDate() - dayCalc + 1); 
         
         const yyyy = d.getFullYear();
         const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -175,7 +166,6 @@
       }
     }
 
-    // 設定週數膠囊
     function setWeeks(weeks) {
       selectedWeeks = weeks;
       const btns = document.querySelectorAll('.week-btn');
@@ -188,7 +178,6 @@
       });
     }
 
-    // 更新狀態
     function setStatus(msg, isError = false) {
       const el = document.getElementById('status-msg');
       el.innerText = msg;
@@ -201,13 +190,21 @@
       }
     }
 
-    // 1. 讀取資料
+    // 1. 讀取資料 (已加入雙重綁定修正)
     async function loadData() {
       setStatus("讀取中...");
       try {
         const response = await fetch(SCRIPT_URL);
         const data = await response.json();
-        items = data.sort((a, b) => parseInt(a['排序'] || 0) - parseInt(b['排序'] || 0));
+        
+        // 修正重點：確保載入時，「編號」與 Apps Script 認定的「格子編號」皆有值
+        items = data.map(item => {
+          let val = item['編號'] !== undefined ? item['編號'] : (item['格子編號'] || '');
+          item['編號'] = val;
+          item['格子編號'] = val;
+          return item;
+        }).sort((a, b) => parseInt(a['排序'] || 0) - parseInt(b['排序'] || 0));
+        
         editingIndex = -1;
         renderEditor();
         setStatus("已同步");
@@ -217,7 +214,6 @@
       }
     }
 
-    // 2. 儲存資料
     async function saveData() {
       setStatus("儲存中...");
       items.forEach((item, index) => item['排序'] = index + 1);
@@ -235,12 +231,11 @@
       }
     }
 
-    // 自動排序功能
     function autoSort() {
       items.sort((a, b) => {
         if (a['類別'] !== b['類別']) return a['類別'] === '器械' ? -1 : 1;
-        const numA = parseInt(a['編號'] || a['格子編號'] || '', 10);
-        const numB = parseInt(b['編號'] || b['格子編號'] || '', 10);
+        const numA = parseInt(a['編號'], 10);
+        const numB = parseInt(b['編號'], 10);
         if (isNaN(numA) && isNaN(numB)) return 0;
         if (isNaN(numA)) return 1;
         if (isNaN(numB)) return -1;
@@ -250,12 +245,11 @@
       saveData();
     }
 
-    // 3. 渲染編輯器表格
     function renderEditor() {
       const tbody = document.getElementById('editor-tbody');
       tbody.innerHTML = '';
       items.forEach((item, index) => {
-        const gridVal = item['編號'] || item['格子編號'] || '';
+        const gridVal = item['編號'] || '';
         const tr = document.createElement('tr');
         
         if (editingIndex === index) {
@@ -341,12 +335,10 @@
       }
     }
 
-    // 4. 產生列印排版
     function generatePrint() {
       const startDateInput = document.getElementById('start-date').value;
       if(!startDateInput) return alert('請先選擇起始日期');
       
-      // 最後防線保護，確保列印的永遠是該週星期一
       let d = new Date(startDateInput);
       const day = d.getDay() || 7; 
       d.setDate(d.getDate() - day + 1); 
@@ -397,11 +389,11 @@
         let gridSpan = 0;
         
         instruments.forEach((item, idx) => {
-           let gridNum = item['編號'] || item['格子編號'] || '';
+           let gridNum = item['編號'] || '';
            tableHTML += `<tr>`;
            
            if(gridNum !== currentGrid || gridNum === "") {
-             gridSpan = instruments.filter(i => (i['編號'] || i['格子編號'] || '') === gridNum && gridNum !== "").length;
+             gridSpan = instruments.filter(i => (i['編號'] || '') === gridNum && gridNum !== "").length;
              if(gridSpan === 0) gridSpan = 1;
              tableHTML += `<td rowspan="${gridSpan}">${gridNum}</td>`;
              currentGrid = gridNum;
