@@ -22,46 +22,47 @@
       #ui-area { display: none !important; }
       #print-area { display: block; width: 100%; }
       
-      /* 1. 設定 A4，上下 1.5 公分，左右 2 公分（為裝訂留空間） */
-      @page { size: A4; margin: 1.5cm 2cm; } 
+      /* 1. 強制消除瀏覽器預設的邊界與頁首/頁尾 (網址、日期) */
+      @page { size: A4; margin: 0; } 
       
-      /* 2. 單頁容器 */
+      /* 2. 建立完美的實體 A4 頁面容器 */
       .print-page {
-        display: block;
+        width: 210mm;
+        height: 296mm; /* 稍微扣除 1mm 避免溢出到下一頁 */
+        padding: 15mm 20mm; /* 實際的留白：上下 1.5cm，左右 2cm (裝訂用) */
+        box-sizing: border-box;
+        position: relative; /* 讓小橫槓以此為基準定位 */
         page-break-after: always;
-        width: 100%;
-        position: relative; /* 加入相對定位，用來對齊打洞標記線 */
+        page-break-inside: avoid;
+        background-color: white;
       }
       .print-page:last-child {
         page-break-after: auto; 
       }
 
-      /* ✨ 新增：打洞器對齊專用小橫線 */
+      /* 3. ✨ 精準的打洞器對齊小橫線 ✨ */
       .print-page::before {
         content: '';
         position: absolute;
-        /* 左邊界為2cm，-1.8cm表示從靠近紙張極限邊緣(避開印表機無法列印區)向內畫 */
-        left: -1.8cm; 
-        /* A4高度29.7cm，正中央為14.85cm。扣除上方1.5cm邊界，精準落在13.35cm */
-        top: 13.35cm; 
-        width: 0.8cm; /* 橫線長度 */
-        border-top: 1.5px solid black; /* 線條粗細，1.5px清晰可見 */
+        left: 5mm; /* 距離紙張最左側物理邊緣 0.5 公分處開始 */
+        top: 50%; /* 絕對垂直置中！保證在紙張一半的位置 */
+        width: 10mm; /* 橫線長度 1 公分 */
+        border-top: 1.5px solid black; /* 線條清晰可見 */
       }
       
-      /* 3. 使用絕對公分高度鎖定表格 */
+      /* 4. 表格設定：高度 100% 自動填滿內縮後的可用空間 */
       .print-table { 
         width: 100%; 
-        height: 25.5cm; 
+        height: 100%; 
         border-collapse: collapse; 
         table-layout: fixed; 
         font-size: 12pt; 
-        page-break-inside: avoid;
       }
       
       .print-table th, .print-table td { 
         border: 1px solid black; 
         text-align: center; 
-        padding: 2px; 
+        padding: 1px; /* 壓縮內部間距，確保多項目時也塞得下 */
       }
       
       .print-table th { background-color: #f9fafb; font-weight: normal; }
