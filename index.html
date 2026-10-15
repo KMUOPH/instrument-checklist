@@ -21,31 +21,32 @@
       #ui-area { display: none !important; }
       #print-area { display: block; width: 100%; }
       
-      @page { size: A4; margin: 0mm !important; } 
+      /* 強制設定實體邊界：上右下1cm、左2cm，解決首頁偏移問題 */
+      @page { size: A4; margin: 10mm 10mm 10mm 20mm !important; } 
       
-      /* 更新邊界：上10mm、右10mm、下10mm、左20mm */
+      /* 單頁容器：不需再加 padding，高度設定為滿版 */
       .print-page {
-        width: 210mm;
-        height: 296mm; 
-        padding: 10mm 10mm 10mm 20mm; 
+        width: 100%;
+        height: 276mm; /* A4 高度 297mm - 邊界 20mm = 277mm，設 276 確保不溢出 */
         box-sizing: border-box;
         position: relative; 
         page-break-after: always;
         page-break-inside: avoid;
-        background-color: white;
       }
       .print-page:last-child {
         page-break-after: auto; 
       }
 
-      /* 打洞器對齊小橫線 (距離左緣0.5cm，垂直絕對置中) */
-      .print-page::before {
-        content: '';
+      /* ✨ 專屬打洞對齊小圓圈 (極淡灰色，僅第一頁會有此元素) */
+      .punch-hole {
         position: absolute;
-        left: 5mm; 
+        left: -13mm; /* 退回左側邊界區內 */
         top: 50%; 
-        width: 10mm; 
-        border-top: 2px solid #d1d5db; 
+        transform: translateY(-50%);
+        width: 6mm; 
+        height: 6mm;
+        border: 1.5px solid #e5e7eb; /* 極淡的灰色 */
+        border-radius: 50%; /* 變成圓圈 */
       }
       
       .print-table { 
@@ -66,12 +67,13 @@
       .print-table thead th { height: 35px; }
       .category-title { height: 35px; }
       
+      /* 調整欄寬：品項縮窄、數量加寬 */
       .col-grid { width: 8%; }
-      .col-name { width: 22%; }
-      .col-qty { width: 8%; }
+      .col-name { width: 18%; }
+      .col-qty { width: 12%; }
       
-      /* 加高簽名欄位高度 */
-      .signature-row td { height: 75px; vertical-align: bottom; padding-bottom: 8px;}
+      /* 簽名欄：稍微縮減高度，並改為垂直置中 */
+      .signature-row td { height: 65px; vertical-align: middle; padding-bottom: 0;}
     }
   </style>
 </head>
@@ -110,54 +112,56 @@
       </div>
     </div>
 
-    <div class="flex justify-between items-end mb-4">
+    <!-- 編輯區標題，並將載入訊息放在旁邊 -->
+    <div class="flex items-end gap-4 mb-4">
       <h2 class="text-xl font-bold text-gray-800">資料編輯區</h2>
-      <button onclick="autoSort()" class="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 font-bold px-4 py-1.5 rounded text-sm transition shadow-sm">
-        ✨ 排序
-      </button>
+      <span id="status-msg" class="text-sm font-medium text-gray-600 bg-gray-100 border px-3 py-1 rounded-full border-transparent">載入中...</span>
     </div>
 
     <div class="overflow-x-auto">
       <table class="w-full border-collapse border border-gray-300 text-sm">
         <thead class="bg-gray-200">
           <tr>
-            <th class="border p-2 w-20">類別</th>
+            <th class="border p-2 w-24">類別</th>
             <th class="border p-2 w-20">編號</th>
             <th class="border p-2">品項名稱</th>
-            <th class="border p-2 w-20">數量</th>
+            <th class="border p-2 w-24">數量</th>
             <th class="border p-2 w-48">操作</th>
           </tr>
         </thead>
         <tbody id="editor-tbody">
           <!-- 資料由 JS 動態產生 -->
         </tbody>
-        <tfoot class="bg-gray-100">
+        <tfoot class="bg-gray-100 border-t-2 border-gray-300">
           <tr>
-            <td class="border p-1">
-              <select id="new-cat" class="w-full p-2 border rounded text-center"><option>器械</option><option>其他</option></select>
+            <td class="border p-2">
+              <select id="new-cat" onchange="handleCatChange()" class="w-full p-2 border rounded text-center font-bold text-gray-700">
+                <option value="器械">器械</option>
+                <option value="其他品項">其他品項</option>
+              </select>
             </td>
-            <td class="border p-1">
-              <input type="text" id="new-grid" class="w-full p-2 border rounded text-center" placeholder="如: 1">
+            <td class="border p-2">
+              <input type="text" id="new-grid" class="w-full p-2 border rounded text-center font-bold text-blue-600" placeholder="如: 1">
             </td>
-            <td class="border p-1">
+            <td class="border p-2">
               <input type="text" id="new-name" class="w-full p-2 border rounded" placeholder="輸入品項名稱">
             </td>
-            <td class="border p-1">
+            <td class="border p-2">
               <input type="number" id="new-qty" class="w-full p-2 border rounded text-center" placeholder="數量">
             </td>
-            <td class="border p-1 text-center">
-              <button onclick="addItem()" class="bg-indigo-500 text-white px-6 py-2 rounded hover:bg-indigo-600 transition shadow-sm font-bold w-full">新增</button>
+            <td class="border p-2">
+              <!-- 新增與排序按鈕並列 -->
+              <div class="flex justify-center items-center gap-2">
+                <button onclick="addItem()" class="bg-indigo-500 text-white px-4 py-2 rounded hover:bg-indigo-600 transition shadow-sm font-bold w-full whitespace-nowrap">新增</button>
+                <button onclick="autoSort()" class="bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 font-bold px-3 py-2 rounded transition shadow-sm whitespace-nowrap" title="依類別與編號自動排序">
+                  ✨ 排序
+                </button>
+              </div>
             </td>
           </tr>
         </tfoot>
       </table>
     </div>
-
-    <!-- 載入中訊息移到表格下方 -->
-    <div class="mt-6 text-center">
-      <span id="status-msg" class="text-sm font-medium text-gray-600 bg-gray-100 border px-4 py-2 rounded-full inline-block">載入中...</span>
-    </div>
-
   </div>
 
   <!-- ================= 列印隱藏區 ================= -->
@@ -216,11 +220,35 @@
       const el = document.getElementById('status-msg');
       el.innerText = msg;
       if(isError) {
-        el.className = "text-sm font-medium text-red-600 bg-red-50 border px-4 py-2 rounded-full inline-block border-red-200";
+        el.className = "text-sm font-medium text-red-600 bg-red-50 border px-3 py-1 rounded-full border-red-200";
       } else if (msg === '已同步') {
-        el.className = "text-sm font-medium text-green-700 bg-green-50 border px-4 py-2 rounded-full inline-block border-green-200";
+        el.className = "text-sm font-medium text-green-700 bg-green-50 border px-3 py-1 rounded-full border-green-200";
       } else {
-        el.className = "text-sm font-medium text-gray-600 bg-gray-100 border px-4 py-2 rounded-full inline-block";
+        el.className = "text-sm font-medium text-gray-600 bg-gray-100 border px-3 py-1 rounded-full border-transparent";
+      }
+    }
+
+    // 處理新增區的分類切換 (自動編號 / 鎖定編號格)
+    function handleCatChange() {
+      const cat = document.getElementById('new-cat').value;
+      const gridInp = document.getElementById('new-grid');
+      if(cat === '其他品項') {
+        gridInp.value = '';
+        gridInp.disabled = true;
+        gridInp.classList.add('bg-gray-200');
+        gridInp.placeholder = '-';
+      } else {
+        gridInp.disabled = false;
+        gridInp.classList.remove('bg-gray-200');
+        gridInp.placeholder = '如: 1';
+        
+        // 自動計算最大編號
+        let maxGrid = 0;
+        items.filter(i => i['類別'] === '器械').forEach(i => {
+          let g = parseInt(i['編號']);
+          if(!isNaN(g) && g > maxGrid) maxGrid = g;
+        });
+        gridInp.value = maxGrid + 1;
       }
     }
 
@@ -231,6 +259,8 @@
         const data = await response.json();
         
         items = data.map(item => {
+          // 資料轉換防錯，確保「其他」轉為「其他品項」
+          if(item['類別'] === '其他') item['類別'] = '其他品項';
           let val = item['編號'] !== undefined ? item['編號'] : (item['格子編號'] || '');
           item['編號'] = val;
           item['格子編號'] = val;
@@ -239,6 +269,7 @@
         
         editingIndex = -1;
         renderEditor();
+        handleCatChange(); // 載入完畢後更新一次新增區的自動編號
         setStatus("已同步");
       } catch (error) {
         console.error(error);
@@ -257,6 +288,7 @@
         });
         setStatus("已同步");
         renderEditor();
+        handleCatChange(); // 儲存完畢後更新一次新增區的自動編號
       } catch (error) {
         console.error(error);
         setStatus("同步失敗", true);
@@ -331,9 +363,9 @@
           tr.className = "bg-yellow-50";
           tr.innerHTML = `
             <td class="border p-2">
-              <select id="edit-cat-${index}" class="w-full p-1 border rounded text-center">
+              <select id="edit-cat-${index}" class="w-full p-1 border rounded text-center text-sm">
                 <option value="器械" ${item['類別']==='器械'?'selected':''}>器械</option>
-                <option value="其他" ${item['類別']==='其他'?'selected':''}>其他</option>
+                <option value="其他品項" ${item['類別']==='其他品項'?'selected':''}>其他品項</option>
               </select>
             </td>
             <td class="border p-2"><input type="text" id="edit-grid-${index}" value="${gridVal}" class="w-full text-center p-1 border rounded"></td>
@@ -341,27 +373,36 @@
             <td class="border p-2"><input type="number" id="edit-qty-${index}" value="${item['數量']}" class="w-full text-center p-1 border rounded"></td>
             <td class="border p-2">
               <div class="flex justify-center items-center gap-2">
-                <button onclick="saveEdit(${index})" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 shadow-sm text-sm font-bold whitespace-nowrap">儲存</button>
-                <button onclick="cancelEdit()" class="bg-gray-400 text-white px-3 py-1 rounded hover:bg-gray-500 shadow-sm text-sm whitespace-nowrap">取消</button>
+                <button onclick="saveEdit(${index})" class="bg-green-500 text-white px-3 py-1.5 rounded hover:bg-green-600 shadow-sm text-sm font-bold whitespace-nowrap">儲存</button>
+                <button onclick="cancelEdit()" class="bg-gray-400 text-white px-3 py-1.5 rounded hover:bg-gray-500 shadow-sm text-sm whitespace-nowrap">取消</button>
               </div>
             </td>
           `;
         } else {
           tr.className = "hover:bg-gray-50";
           tr.innerHTML = `
-            <td class="border p-2 text-center">${item['類別']}</td>
+            <td class="border p-2 text-center text-gray-700">${item['類別']}</td>
             <td class="border p-2 text-center font-bold text-blue-600">${gridVal}</td>
             <td class="border p-2">${item['品項']}</td>
-            <td class="border p-2 text-center">${item['數量']}</td>
+            <td class="border p-2 text-center text-lg">${item['數量']}</td>
             <td class="border p-2">
               <div class="flex justify-center items-center gap-3">
-                <button onclick="moveItem(${index}, -1)" class="text-gray-400 hover:text-gray-800 font-bold px-1 transition" title="上移">↑</button>
-                <button onclick="moveItem(${index}, 1)" class="text-gray-400 hover:text-gray-800 font-bold px-1 transition" title="下移">↓</button>
-                <button onclick="enableEdit(${index})" class="text-blue-600 hover:text-blue-800 font-bold text-sm whitespace-nowrap">編輯</button>
-                <button onclick="deleteItem(${index})" class="text-red-500 hover:text-red-700 transition" title="刪除">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
+                <!-- SVG 上下箭頭圖示 -->
+                <button onclick="moveItem(${index}, -1)" class="text-gray-400 hover:text-indigo-600 transition p-1" title="上移">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
+                </button>
+                <button onclick="moveItem(${index}, 1)" class="text-gray-400 hover:text-indigo-600 transition p-1" title="下移">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
+                </button>
+                
+                <!-- SVG 筆圖示 (編輯) -->
+                <button onclick="enableEdit(${index})" class="text-blue-500 hover:text-blue-700 transition p-1 ml-2" title="編輯">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                </button>
+
+                <!-- SVG 垃圾桶 (刪除) -->
+                <button onclick="deleteItem(${index})" class="text-red-400 hover:text-red-600 transition p-1" title="刪除">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                 </button>
               </div>
             </td>
@@ -439,6 +480,13 @@
         const page = document.createElement('div');
         page.className = 'print-page';
         
+        // 僅在第一頁加入打洞器標記
+        if (w === 0) {
+          const punchHole = document.createElement('div');
+          punchHole.className = 'punch-hole';
+          page.appendChild(punchHole);
+        }
+        
         let tableHTML = `
           <table class="print-table">
             <colgroup>
@@ -483,7 +531,8 @@
                          <td></td><td></td><td></td><td></td><td></td></tr>`;
         });
 
-        const others = items.filter(i => i['類別'] !== '器械');
+        // 確保列印也正確比對「其他品項」
+        const others = items.filter(i => i['類別'] === '其他品項' || i['類別'] === '其他');
         tableHTML += `<tr><td colspan="8" class="category-title" style="font-size: 13pt; letter-spacing: 1em;">其他品項</td></tr>`;
         
         others.forEach(item => {
@@ -502,7 +551,7 @@
             </tbody>
           </table>
         `;
-        page.innerHTML = tableHTML;
+        page.innerHTML += tableHTML; // 確保打洞 div 不被覆蓋
         printArea.appendChild(page);
       }
 
