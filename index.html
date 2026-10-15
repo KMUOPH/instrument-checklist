@@ -25,23 +25,36 @@
       /* 1. 設定 A4，上下 1.5 公分，左右 2 公分（為裝訂留空間） */
       @page { size: A4; margin: 1.5cm 2cm; } 
       
-      /* 2. 修正分頁失效的問題：改用純 block 排版 */
+      /* 2. 單頁容器 */
       .print-page {
         display: block;
         page-break-after: always;
         width: 100%;
+        position: relative; /* 加入相對定位，用來對齊打洞標記線 */
       }
       .print-page:last-child {
-        page-break-after: auto; /* 最後一頁不要多出空白頁 */
+        page-break-after: auto; 
+      }
+
+      /* ✨ 新增：打洞器對齊專用小橫線 */
+      .print-page::before {
+        content: '';
+        position: absolute;
+        /* 左邊界為2cm，-1.8cm表示從靠近紙張極限邊緣(避開印表機無法列印區)向內畫 */
+        left: -1.8cm; 
+        /* A4高度29.7cm，正中央為14.85cm。扣除上方1.5cm邊界，精準落在13.35cm */
+        top: 13.35cm; 
+        width: 0.8cm; /* 橫線長度 */
+        border-top: 1.5px solid black; /* 線條粗細，1.5px清晰可見 */
       }
       
-      /* 3. 使用絕對公分高度鎖定表格，確保不管幾個項目都會壓縮在同一頁 */
+      /* 3. 使用絕對公分高度鎖定表格 */
       .print-table { 
         width: 100%; 
         height: 25.5cm; 
         border-collapse: collapse; 
         table-layout: fixed; 
-        font-size: 12pt; /* 字體微調，容納更多項目 */
+        font-size: 12pt; 
         page-break-inside: avoid;
       }
       
