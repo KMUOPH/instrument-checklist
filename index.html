@@ -1,0 +1,37 @@
+// 填入您剛才複製的 Google Apps Script 網址
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzwGKX1VXJY1EaWulhxdKUB-NUnIR1oSJwHa2xQFezah8-QkpUABkOIWpq6xsx4Tic_/exec'; 
+
+// 1. 從 Google Sheets 讀取資料
+async function loadDataFromCloud() {
+  try {
+    document.getElementById('loading-message').innerText = "載入雲端資料中...";
+    const response = await fetch(SCRIPT_URL);
+    const data = await response.json();
+    
+    // 將抓下來的資料轉換為您的網頁格式並渲染
+    inventoryItems = data; 
+    renderTable(); 
+  } catch (error) {
+    console.error("讀取失敗", error);
+  }
+}
+
+// 2. 將修改後的資料存回 Google Sheets
+async function saveDataToCloud() {
+  try {
+    document.getElementById('save-status').innerText = "儲存中...";
+    await fetch(SCRIPT_URL, {
+      method: 'POST',
+      // 這裡使用 text/plain 可避免跨網域 (CORS) 的 Preflight 阻擋問題
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(inventoryItems)
+    });
+    document.getElementById('save-status').innerText = "已同步至雲端！";
+  } catch (error) {
+    console.error("儲存失敗", error);
+    document.getElementById('save-status').innerText = "儲存失敗，請檢查網路";
+  }
+}
+
+// 網頁載入時自動執行讀取
+window.onload = loadDataFromCloud;
