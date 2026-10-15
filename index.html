@@ -97,8 +97,8 @@
             <th class="border p-2 w-20">編號</th>
             <th class="border p-2">品項名稱</th>
             <th class="border p-2 w-20">數量</th>
-            <!-- 放寬操作欄位寬度為 w-32 -->
-            <th class="border p-2 w-32">操作</th>
+            <!-- 放寬操作欄位確保並排 -->
+            <th class="border p-2 w-48">操作</th>
           </tr>
         </thead>
         <tbody id="editor-tbody">
@@ -230,15 +230,66 @@
       }
     }
 
+    // 智慧型上下移動邏輯
+    function moveItem(index, direction) {
+      if (index + direction < 0 || index + direction >= items.length) return;
+
+      const sourceItem = items[index];
+      const targetItem = items[index + direction];
+      const sourceCat = sourceItem['類別'];
+      const targetCat = targetItem['類別'];
+
+      if (sourceCat !== targetCat) return; // 避免跨類別移動
+
+      const sourceGrid = sourceItem['編號'] || '';
+      const targetGrid = targetItem['編號'] || '';
+
+      if (sourceGrid === targetGrid) {
+        // 情況 1：同編號群組內移動（單純交換這兩個品項的位置）
+        [items[index], items[index + direction]] = [items[index + direction], items[index]];
+      } else {
+        // 情況 2：遇到不同編號（群組大搬風，對調兩個群組的編號）
+        if (sourceGrid !== '' && targetGrid !== '') {
+            items.forEach(item => {
+              if (item['類別'] === sourceCat) {
+                if (String(item['編號']) === String(sourceGrid)) {
+                  item['編號'] = targetGrid;
+                  item['格子編號'] = targetGrid;
+                } else if (String(item['編號']) === String(targetGrid)) {
+                  item['編號'] = sourceGrid;
+                  item['格子編號'] = sourceGrid;
+                }
+              }
+            });
+        } else {
+            // 若其中一個沒有編號，則單純交換位置
+            [items[index], items[index + direction]] = [items[index + direction], items[index]];
+        }
+      }
+
+      // 重新分配底層排序號碼，確保自動排序時能記住相對位置
+      items.forEach((item, idx) => item['排序'] = idx + 1);
+      autoSort(); 
+    }
+
+    // 更新自動排序：增加同號防錯機制
     function autoSort() {
       items.sort((a, b) => {
         if (a['類別'] !== b['類別']) return a['類別'] === '器械' ? -1 : 1;
         const numA = parseInt(a['編號'], 10);
         const numB = parseInt(b['編號'], 10);
-        if (isNaN(numA) && isNaN(numB)) return 0;
-        if (isNaN(numA)) return 1;
-        if (isNaN(numB)) return -1;
-        return numA - numB;
+        
+        const isNaNA = isNaN(numA);
+        const isNaNB = isNaN(numB);
+        
+        // 若都沒有編號，維持當前陣列順序
+        if (isNaNA && isNaNB) return (a['排序'] || 0) - (b['排序'] || 0);
+        if (isNaNA) return 1;
+        if (isNaNB) return -1;
+        if (numA !== numB) return numA - numB;
+        
+        // 若編號相同，依據方才賦予的連續排序值維持內部順序
+        return (a['排序'] || 0) - (b['排序'] || 0);
       });
       editingIndex = -1;
       saveData();
@@ -264,7 +315,6 @@
             <td class="border p-2"><input type="text" id="edit-name-${index}" value="${item['品項']}" class="w-full p-1 border rounded"></td>
             <td class="border p-2"><input type="number" id="edit-qty-${index}" value="${item['數量']}" class="w-full text-center p-1 border rounded"></td>
             <td class="border p-2">
-              <!-- 加入 flex 與 whitespace-nowrap 強制按鈕單行並排 -->
               <div class="flex justify-center items-center gap-2">
                 <button onclick="saveEdit(${index})" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 shadow-sm text-sm font-bold whitespace-nowrap">儲存</button>
                 <button onclick="cancelEdit()" class="bg-gray-400 text-white px-3 py-1 rounded hover:bg-gray-500 shadow-sm text-sm whitespace-nowrap">取消</button>
@@ -279,7 +329,10 @@
             <td class="border p-2">${item['品項']}</td>
             <td class="border p-2 text-center">${item['數量']}</td>
             <td class="border p-2">
-              <div class="flex justify-center items-center gap-4">
+              <!-- 加入上下移動的箭頭按鈕 -->
+              <div class="flex justify-center items-center gap-3">
+                <button onclick="moveItem(${index}, -1)" class="text-gray-400 hover:text-gray-800 font-bold px-1 transition" title="上移">↑</button>
+                <button onclick="moveItem(${index}, 1)" class="text-gray-400 hover:text-gray-800 font-bold px-1 transition" title="下移">↓</button>
                 <button onclick="enableEdit(${index})" class="text-blue-600 hover:text-blue-800 font-bold text-sm whitespace-nowrap">編輯</button>
                 <button onclick="deleteItem(${index})" class="text-red-500 hover:text-red-700 transition" title="刪除">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
