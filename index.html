@@ -21,38 +21,37 @@
       #ui-area { display: none !important; }
       #print-area { display: block; width: 100%; }
       
-      /* 終極對稱邊界：直接由實體頁面接管，奇數頁左邊留 20mm，其他皆為 10mm */
-      @page { size: A4; margin: 10mm 10mm 10mm 20mm; } 
+      /* 1. 預設邊界 (確保上下為 10mm) */
+      @page { size: A4; margin: 10mm; } 
       
-      /* 偶數頁：右邊留 20mm，其餘皆為 10mm，達到完美雙面列印對稱 */
+      /* 2. 雙面列印對稱邊界：偶數頁(背)右邊留2cm，奇數頁(正)左邊留2cm */
       @page :left { margin: 10mm 20mm 10mm 10mm; }
       @page :right { margin: 10mm 10mm 10mm 20mm; }
 
-      /* 表格容器高度設為 100% 自動填滿扣除 margin 後的物理空間 */
+      /* 3. 頁面容器：高度設定為 A4 扣掉上下邊界 (297 - 20 = 277)，微調至276mm防破版 */
       .print-page {
         width: 100%;
-        height: 100%; 
+        height: 276mm; 
         position: relative; 
         page-break-after: always;
         page-break-inside: avoid;
-        overflow: hidden; 
       }
       .print-page.last-page {
         page-break-after: auto; 
       }
 
-      /* ✨ 朝左的極淡三角形打洞標記 ✨ */
+      /* ✨ 專屬打洞對齊小三角形 (極淺灰、尖角朝左) */
       .punch-mark {
         position: absolute;
         top: 50%; 
         transform: translateY(-50%);
-        /* 定位在左側裝訂邊 */
-        left: -10mm; 
+        /* 因為只在奇數頁(左邊界20mm)，所以-15mm會剛好落在距離紙張最左側0.5cm處 */
+        left: -15mm; 
         width: 0; 
         height: 0;
-        border-top: 6px solid transparent;
-        border-bottom: 6px solid transparent;
-        border-right: 8px solid #e5e7eb; /* 朝左的淺灰三角形 */
+        border-top: 5px solid transparent;
+        border-bottom: 5px solid transparent;
+        border-right: 7px solid #e5e7eb; /* 淺灰三角形 */
       }
       
       .print-table { 
@@ -73,70 +72,59 @@
       .print-table thead th { height: 35px; }
       .category-title { height: 35px; }
       
-      /* 列印時的欄寬配置 */
       .col-grid { width: 8%; }
-      .col-name { width: 16%; }
+      .col-name { width: 18%; }
       .col-qty { width: 10%; }
       
-      .signature-row td { height: 55px; vertical-align: middle; padding-bottom: 0;}
+      /* 簽名欄：高度再縮小至 45px */
+      .signature-row td { height: 45px; vertical-align: middle; padding-bottom: 0;}
     }
   </style>
 </head>
 <body class="bg-gray-100 p-4">
 
-  <!-- ================= 緊湊版操作介面區 ================= -->
-  <div id="ui-area" class="max-w-2xl mx-auto bg-white p-6 rounded-lg shadow-md">
+  <!-- ================= 極致壓縮版操作介面區 ================= -->
+  <div id="ui-area" class="max-w-xl mx-auto bg-white p-5 rounded-lg shadow-md">
     
-    <div class="flex items-center gap-4 mb-4">
-      <h1 class="text-2xl font-bold text-gray-800">治療室點班單系統</h1>
+    <div class="flex items-center justify-between mb-4">
+      <h1 class="text-xl font-bold text-gray-800">治療室點班單系統</h1>
+      <span id="status-msg" class="text-xs font-medium text-gray-600 bg-gray-100 border px-2 py-0.5 rounded-full border-transparent">載入中...</span>
     </div>
     
-    <!-- 縮小的控制面板 -->
-    <div class="flex flex-wrap gap-4 items-center mb-6 bg-gray-50 p-4 rounded border">
+    <!-- 縮小並緊湊的控制面板 -->
+    <div class="flex flex-wrap gap-3 items-center mb-5 bg-gray-50 p-3 rounded border">
       
       <!-- 起始日期 -->
       <div class="flex flex-col gap-1">
-        <label class="text-xs font-bold text-gray-700 leading-none">起始日期 (週一)</label>
-        <input type="date" id="start-date" onchange="checkMonday()" class="border border-gray-300 px-2 rounded h-8 w-36 box-border text-sm">
+        <label class="text-[10px] font-bold text-gray-500 leading-none">起始日期 (週一)</label>
+        <input type="date" id="start-date" onchange="checkMonday()" class="border border-gray-300 px-2 rounded h-8 w-32 text-xs">
       </div>
       
-      <!-- 2x2 週數膠囊陣列 -->
-      <div class="flex flex-col gap-1">
-        <div class="grid grid-cols-2 gap-1" id="week-pills">
-          <button onclick="setWeeks(2)" class="week-btn bg-gray-200 text-gray-700 hover:bg-gray-300 w-12 h-6 rounded-md text-xs font-medium transition flex items-center justify-center">2週</button>
-          <button onclick="setWeeks(4)" class="week-btn bg-gray-200 text-gray-700 hover:bg-gray-300 w-12 h-6 rounded-md text-xs font-medium transition flex items-center justify-center">4週</button>
-          <button onclick="setWeeks(6)" class="week-btn bg-blue-600 text-white w-12 h-6 rounded-md text-xs font-medium transition flex items-center justify-center shadow-sm" data-active="true">6週</button>
-          <button onclick="setWeeks(8)" class="week-btn bg-gray-200 text-gray-700 hover:bg-gray-300 w-12 h-6 rounded-md text-xs font-medium transition flex items-center justify-center">8週</button>
-        </div>
+      <!-- 2x2 週數膠囊陣列 (移除文字標籤) -->
+      <div class="grid grid-cols-2 gap-1 ml-2" id="week-pills">
+        <button onclick="setWeeks(2)" class="week-btn bg-gray-200 text-gray-700 hover:bg-gray-300 w-10 h-6 rounded text-[11px] font-medium transition flex items-center justify-center">2週</button>
+        <button onclick="setWeeks(4)" class="week-btn bg-gray-200 text-gray-700 hover:bg-gray-300 w-10 h-6 rounded text-[11px] font-medium transition flex items-center justify-center">4週</button>
+        <button onclick="setWeeks(6)" class="week-btn bg-blue-600 text-white w-10 h-6 rounded text-[11px] font-medium transition flex items-center justify-center shadow-sm" data-active="true">6週</button>
+        <button onclick="setWeeks(8)" class="week-btn bg-gray-200 text-gray-700 hover:bg-gray-300 w-10 h-6 rounded text-[11px] font-medium transition flex items-center justify-center">8週</button>
       </div>
 
       <!-- 右側按鈕群 -->
       <div class="ml-auto flex gap-2">
-        <button onclick="loadData()" class="bg-gray-500 hover:bg-gray-600 text-white font-bold px-3 h-10 rounded transition shadow text-sm">
-          重新載入
-        </button>
-        <button onclick="generatePrint()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 h-10 rounded transition shadow text-sm">
-          列印
-        </button>
+        <button onclick="loadData()" class="bg-gray-500 hover:bg-gray-600 text-white font-bold px-3 h-8 rounded transition shadow text-xs">重新載入</button>
+        <button onclick="generatePrint()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 h-8 rounded transition shadow text-xs">列印</button>
       </div>
-    </div>
-
-    <!-- 編輯區標題 -->
-    <div class="flex items-end gap-3 mb-3">
-      <h2 class="text-lg font-bold text-gray-800">資料編輯區</h2>
-      <span id="status-msg" class="text-xs font-medium text-gray-600 bg-gray-100 border px-2 py-0.5 rounded-full border-transparent">載入中...</span>
     </div>
 
     <!-- 極度壓縮欄寬的表格 -->
     <div class="overflow-x-auto">
-      <table class="w-full border-collapse border border-gray-300 text-sm">
+      <table class="w-full border-collapse border border-gray-300 text-xs">
         <thead class="bg-gray-200">
           <tr>
-            <th class="border p-1 w-20">類別</th>
-            <th class="border p-1 w-12">編號</th>
-            <!-- 將品項名稱縮到極小 -->
-            <th class="border p-1 w-28">品項名稱</th>
-            <th class="border p-1 w-16">數量</th>
+            <th class="border p-1 w-14">類別</th>
+            <th class="border p-1 w-10">編號</th>
+            <!-- 強制縮小品項名稱寬度 -->
+            <th class="border p-1 w-24">品項名稱</th>
+            <th class="border p-1 w-12">數量</th>
             <th class="border p-1 w-32">操作</th>
           </tr>
         </thead>
@@ -163,8 +151,9 @@
             <td class="border p-1">
               <div class="flex justify-center items-center gap-1">
                 <button onclick="addItem()" class="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 transition shadow-sm font-bold w-full text-xs whitespace-nowrap">新增</button>
-                <button onclick="autoSort()" class="bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 font-bold px-1.5 py-1 rounded transition shadow-sm whitespace-nowrap text-xs" title="排序">
-                  ✨
+                <!-- 加回「排序」文字 -->
+                <button onclick="autoSort()" class="bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 font-bold px-2 py-1 rounded transition shadow-sm whitespace-nowrap text-xs" title="排序">
+                  ✨ 排序
                 </button>
               </div>
             </td>
@@ -219,9 +208,9 @@
       const btns = document.querySelectorAll('.week-btn');
       btns.forEach(btn => {
         if (btn.innerText.includes(weeks)) {
-          btn.className = "week-btn bg-blue-600 text-white w-12 h-6 rounded-md text-xs font-medium transition flex items-center justify-center shadow-sm";
+          btn.className = "week-btn bg-blue-600 text-white w-10 h-6 rounded text-[11px] font-medium transition flex items-center justify-center shadow-sm";
         } else {
-          btn.className = "week-btn bg-gray-200 text-gray-700 hover:bg-gray-300 w-12 h-6 rounded-md text-xs font-medium transition flex items-center justify-center";
+          btn.className = "week-btn bg-gray-200 text-gray-700 hover:bg-gray-300 w-10 h-6 rounded text-[11px] font-medium transition flex items-center justify-center";
         }
       });
     }
@@ -388,17 +377,17 @@
         } else {
           tr.className = "hover:bg-gray-50";
           tr.innerHTML = `
-            <td class="border p-1 text-center text-gray-700 text-xs">${item['類別']}</td>
+            <td class="border p-1 text-center text-gray-700">${item['類別']}</td>
             <td class="border p-1 text-center font-bold text-blue-600 text-sm">${gridVal}</td>
-            <td class="border p-1 text-xs truncate max-w-[120px]">${item['品項']}</td>
+            <td class="border p-1 truncate max-w-[100px]">${item['品項']}</td>
             <td class="border p-1 text-center font-bold">${item['數量']}</td>
             <td class="border p-1">
-              <div class="flex justify-center items-center gap-2">
-                <!-- 全新淺灰底實心黑箭頭 (上移) -->
+              <div class="flex justify-center items-center gap-1.5">
+                <!-- 淺灰底實心黑箭頭 (上移) -->
                 <button onclick="moveItem(${index}, -1)" class="bg-gray-200 text-black hover:bg-gray-300 w-6 h-6 rounded flex items-center justify-center transition" title="上移">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
                 </button>
-                <!-- 全新淺灰底實心黑箭頭 (下移) -->
+                <!-- 淺灰底實心黑箭頭 (下移) -->
                 <button onclick="moveItem(${index}, 1)" class="bg-gray-200 text-black hover:bg-gray-300 w-6 h-6 rounded flex items-center justify-center transition" title="下移">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
                 </button>
@@ -486,10 +475,7 @@
         }
 
         const page = document.createElement('div');
-        
-        // 奇數偶數頁判斷
-        const isOddPage = (w % 2 === 0);
-        page.className = 'print-page ' + (isOddPage ? 'page-odd' : 'page-even');
+        page.className = 'print-page';
         
         if (w === selectedWeeks - 1) {
           page.classList.add('last-page');
