@@ -4,8 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>治療室點班單</title>
+  
+  <!-- 桌面與手機 Logo 設定 -->
   <link rel="icon" type="image/png" href="logo.png">
   <link rel="apple-touch-icon" href="logo.png">
+
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* 螢幕顯示模式：隱藏列印區 */
@@ -13,32 +16,32 @@
       #print-area { display: none; }
     }
     
-    /* 列印模式：隱藏操作介面，設定A4滿版與置中 */
+    /* 列印模式 */
     @media print {
       body { background-color: white; padding: 0; margin: 0; }
       #ui-area { display: none !important; }
       #print-area { display: block; width: 100%; }
-      @page { size: A4; margin: 8mm auto; } 
       
-      /* 單頁容器：負責將內容完美置中 */
+      /* 1. 設定 A4，上下 1.5 公分，左右 2 公分（為裝訂留空間） */
+      @page { size: A4; margin: 1.5cm 2cm; } 
+      
+      /* 2. 修正分頁失效的問題：改用純 block 排版 */
       .print-page {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 97vh; /* 抓取接近單頁的最大高度 */
+        display: block;
+        page-break-after: always;
         width: 100%;
-        box-sizing: border-box;
       }
-      .page-break { page-break-after: always; }
+      .print-page:last-child {
+        page-break-after: auto; /* 最後一頁不要多出空白頁 */
+      }
       
-      /* 表格本體 */
+      /* 3. 使用絕對公分高度鎖定表格，確保不管幾個項目都會壓縮在同一頁 */
       .print-table { 
-        width: 94%; /* 留出左右邊界，達到完美水平置中 */
-        height: 100%; /* 完美垂直置中並自動延展列高 */
-        margin: 0 auto; 
+        width: 100%; 
+        height: 25.5cm; 
         border-collapse: collapse; 
         table-layout: fixed; 
-        font-size: 13pt; 
+        font-size: 12pt; /* 字體微調，容納更多項目 */
         page-break-inside: avoid;
       }
       
@@ -56,7 +59,7 @@
       .col-name { width: 22%; }
       .col-qty { width: 8%; }
       
-      .signature-row td { height: 50px; vertical-align: bottom; padding-bottom: 5px;}
+      .signature-row td { height: 45px; vertical-align: bottom; padding-bottom: 5px;}
     }
   </style>
 </head>
@@ -417,8 +420,7 @@
         }
 
         const page = document.createElement('div');
-        // 為每頁加上置中容器樣式
-        page.className = 'print-page' + ((w < selectedWeeks - 1) ? ' page-break' : '');
+        page.className = 'print-page';
         
         let tableHTML = `
           <table class="print-table">
