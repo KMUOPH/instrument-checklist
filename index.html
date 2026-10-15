@@ -22,14 +22,14 @@
       #ui-area { display: none !important; }
       #print-area { display: block; width: 100%; }
       
-      /* 1. 強制消除瀏覽器預設的邊界與頁首/頁尾 (網址、日期) */
-      @page { size: A4; margin: 0; } 
+      /* 1. 強制消除瀏覽器預設的邊界，這會強制關閉網址、日期等頁首頁尾 */
+      @page { size: A4; margin: 0mm !important; } 
       
       /* 2. 建立完美的實體 A4 頁面容器 */
       .print-page {
         width: 210mm;
-        height: 296mm; /* 稍微扣除 1mm 避免溢出到下一頁 */
-        padding: 15mm 20mm; /* 實際的留白：上下 1.5cm，左右 2cm (裝訂用) */
+        height: 296mm; 
+        padding: 15mm 20mm; /* 上下 1.5cm，左右 2cm (裝訂用) */
         box-sizing: border-box;
         position: relative; /* 讓小橫槓以此為基準定位 */
         page-break-after: always;
@@ -40,17 +40,17 @@
         page-break-after: auto; 
       }
 
-      /* 3. ✨ 精準的打洞器對齊小橫線 ✨ */
+      /* 3. ✨ 精準的打洞器對齊小橫線 (改為淡灰色) ✨ */
       .print-page::before {
         content: '';
         position: absolute;
-        left: 5mm; /* 距離紙張最左側物理邊緣 0.5 公分處開始 */
-        top: 50%; /* 絕對垂直置中！保證在紙張一半的位置 */
-        width: 10mm; /* 橫線長度 1 公分 */
-        border-top: 1.5px solid black; /* 線條清晰可見 */
+        left: 5mm; 
+        top: 50%; /* 絕對垂直置中 */
+        width: 10mm; 
+        border-top: 2px solid #d1d5db; /* 淡灰色，稍微加粗確保印得出來 */
       }
       
-      /* 4. 表格設定：高度 100% 自動填滿內縮後的可用空間 */
+      /* 4. 表格設定：高度 100% 自動填滿可用空間 */
       .print-table { 
         width: 100%; 
         height: 100%; 
@@ -62,7 +62,7 @@
       .print-table th, .print-table td { 
         border: 1px solid black; 
         text-align: center; 
-        padding: 1px; /* 壓縮內部間距，確保多項目時也塞得下 */
+        padding: 1px; 
       }
       
       .print-table th { background-color: #f9fafb; font-weight: normal; }
