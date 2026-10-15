@@ -16,18 +16,19 @@
       body { background-color: white; padding: 0; margin: 0; }
       #ui-area { display: none !important; }
       #print-area { display: block; width: 100%; }
-      @page { size: A4; margin: 8mm; }
+      @page { size: A4; margin: 5mm; } /* 縮小邊界確保單頁塞入 */
       
       .print-table { 
         width: 100%; 
         border-collapse: collapse; 
         table-layout: fixed; 
-        font-size: 13pt; 
+        font-size: 12pt; /* 略微縮小字體以防超出單頁 */
+        page-break-inside: avoid;
       }
       .print-table th, .print-table td { 
         border: 1px solid black; 
         text-align: center; 
-        padding: 6px 2px; 
+        padding: 4px 2px; /* 縮小上下間距確保單頁塞入 */
       }
       .print-table th { background-color: #f9fafb; font-weight: normal; }
       
@@ -37,7 +38,7 @@
       .col-qty { width: 8%; }
       
       /* 簽名欄高度 */
-      .signature-row td { height: 60px; vertical-align: bottom; padding-bottom: 5px;}
+      .signature-row td { height: 45px; vertical-align: bottom; padding-bottom: 5px;}
       .page-break { page-break-after: always; }
     }
   </style>
@@ -46,37 +47,47 @@
 
   <!-- ================= 操作介面區 ================= -->
   <div id="ui-area" class="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-md">
-    <h1 class="text-3xl font-bold text-gray-800 mb-2">治療室點班單系統</h1>
-    <p id="status-msg" class="text-blue-600 font-bold mb-6">狀態：讀取雲端資料中...</p>
     
-    <div class="flex flex-wrap gap-4 items-end mb-8 bg-gray-50 p-4 rounded border">
+    <!-- 標題與狀態 -->
+    <div class="flex items-center gap-4 mb-6">
+      <h1 class="text-3xl font-bold text-gray-800">治療室點班單系統</h1>
+      <span id="status-msg" class="text-sm font-medium text-gray-600 bg-gray-100 px-3 py-1 rounded-full border">讀取中...</span>
+    </div>
+    
+    <!-- 控制面板 -->
+    <div class="flex flex-wrap gap-6 items-end mb-8 bg-gray-50 p-5 rounded border">
       <div>
-        <label class="block text-sm font-bold mb-1">選擇起始日期</label>
-        <input type="date" id="start-date" class="border border-gray-300 p-2 rounded">
-        <p class="text-xs text-gray-500 mt-1">系統會自動校正為當週星期一</p>
+        <label class="block text-sm font-bold text-gray-700 mb-2">起始日期</label>
+        <input type="date" id="start-date" class="border border-gray-300 p-2 rounded w-40">
       </div>
+      
       <div>
-        <label class="block text-sm font-bold mb-1">列印週數</label>
-        <select id="weeks-select" class="border border-gray-300 p-2 rounded">
-          <option value="4">4 週</option>
-          <option value="6">6 週</option>
-        </select>
+        <label class="block text-sm font-bold text-gray-700 mb-2">列印週數</label>
+        <div class="flex gap-2" id="week-pills">
+          <button onclick="setWeeks(2)" class="week-btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-4 py-1.5 rounded-full text-sm font-medium transition">2週</button>
+          <button onclick="setWeeks(4)" class="week-btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-4 py-1.5 rounded-full text-sm font-medium transition">4週</button>
+          <button onclick="setWeeks(6)" class="week-btn bg-blue-600 text-white px-4 py-1.5 rounded-full text-sm font-medium transition" data-active="true">6週</button>
+          <button onclick="setWeeks(8)" class="week-btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-4 py-1.5 rounded-full text-sm font-medium transition">8週</button>
+        </div>
       </div>
-      <button onclick="generatePrint()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-2 rounded transition">
-        產生並列印表格
-      </button>
-      <button onclick="loadData()" class="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded transition ml-auto">
-        強制重新載入
-      </button>
+
+      <div class="ml-auto flex gap-3">
+        <button onclick="loadData()" class="bg-gray-500 hover:bg-gray-600 text-white font-bold px-4 py-2 rounded transition shadow">
+          重新載入
+        </button>
+        <button onclick="generatePrint()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 py-2 rounded transition shadow">
+          列印
+        </button>
+      </div>
     </div>
 
-    <h2 class="text-xl font-bold mb-4">資料編輯區 (自動同步至 Google Sheets)</h2>
+    <h2 class="text-xl font-bold mb-4 text-gray-800">資料編輯區</h2>
     <div class="overflow-x-auto">
       <table class="w-full border-collapse border border-gray-300 text-sm">
         <thead class="bg-gray-200">
           <tr>
             <th class="border p-2 w-20">類別</th>
-            <th class="border p-2 w-20">格子編號</th>
+            <th class="border p-2 w-20">編號</th>
             <th class="border p-2">品項名稱</th>
             <th class="border p-2 w-20">數量</th>
             <th class="border p-2 w-32">操作</th>
@@ -100,7 +111,7 @@
               <input type="number" id="new-qty" class="w-full p-1 border rounded text-center" placeholder="數量">
             </td>
             <td class="border p-1 text-center">
-              <button onclick="addItem()" class="bg-indigo-500 text-white px-4 py-1 rounded hover:bg-indigo-600">新增</button>
+              <button onclick="addItem()" class="bg-indigo-500 text-white px-4 py-1 rounded hover:bg-indigo-600 transition shadow-sm">新增</button>
             </td>
           </tr>
         </tfoot>
@@ -116,26 +127,65 @@
     // 您專屬的 Google Apps Script 網址
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzwGKX1VXJY1EaWulhxdKUB-NUnIR1oSJwHa2xQFezah8-QkpUABkOIWpq6xsx4Tic_/exec';
     let items = [];
+    let selectedWeeks = 6; // 預設列印 6 週
+
+    // 初始化日期：設定為當週星期一
+    function initDate() {
+      const d = new Date();
+      const day = d.getDay() || 7; // 將週日(0)轉換為7
+      d.setDate(d.getDate() - day + 1); // 減去天數回到週一
+      
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      document.getElementById('start-date').value = `${yyyy}-${mm}-${dd}`;
+    }
+
+    // 設定週數膠囊樣式與數值
+    function setWeeks(weeks) {
+      selectedWeeks = weeks;
+      const btns = document.querySelectorAll('.week-btn');
+      btns.forEach(btn => {
+        if (btn.innerText.includes(weeks)) {
+          btn.className = "week-btn bg-blue-600 text-white px-4 py-1.5 rounded-full text-sm font-medium transition shadow-sm";
+        } else {
+          btn.className = "week-btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-4 py-1.5 rounded-full text-sm font-medium transition";
+        }
+      });
+    }
+
+    // 更新狀態文字 UI
+    function setStatus(msg, isError = false) {
+      const el = document.getElementById('status-msg');
+      el.innerText = msg;
+      if(isError) {
+        el.className = "text-sm font-medium text-red-600 bg-red-50 px-3 py-1 rounded-full border border-red-200";
+      } else if (msg === '已同步') {
+        el.className = "text-sm font-medium text-green-700 bg-green-50 px-3 py-1 rounded-full border border-green-200";
+      } else {
+        el.className = "text-sm font-medium text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200";
+      }
+    }
 
     // 1. 從 Google Sheets 讀取資料
     async function loadData() {
-      document.getElementById('status-msg').innerText = "狀態：讀取雲端資料中...";
+      setStatus("讀取中...");
       try {
         const response = await fetch(SCRIPT_URL);
         const data = await response.json();
         // 依照「排序」欄位重新排序
         items = data.sort((a, b) => parseInt(a['排序'] || 0) - parseInt(b['排序'] || 0));
         renderEditor();
-        document.getElementById('status-msg').innerText = "狀態：✅ 已與雲端同步";
+        setStatus("已同步");
       } catch (error) {
         console.error(error);
-        document.getElementById('status-msg').innerText = "狀態：❌ 讀取失敗，請檢查網路連線";
+        setStatus("同步失敗", true);
       }
     }
 
     // 2. 儲存資料到 Google Sheets
     async function saveData() {
-      document.getElementById('status-msg').innerText = "狀態：儲存至雲端中...";
+      setStatus("儲存中...");
       // 確保排序欄位正確對應陣列順序
       items.forEach((item, index) => item['排序'] = index + 1);
       
@@ -145,11 +195,11 @@
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify(items)
         });
-        document.getElementById('status-msg').innerText = "狀態：✅ 已與雲端同步";
+        setStatus("已同步");
         renderEditor();
       } catch (error) {
         console.error(error);
-        document.getElementById('status-msg').innerText = "狀態：❌ 儲存失敗，資料尚未同步";
+        setStatus("同步失敗", true);
       }
     }
 
@@ -165,8 +215,8 @@
           <td class="border p-1"><input type="text" value="${item['品項']}" onchange="updateItem(${index}, '品項', this.value)" class="w-full p-1 bg-transparent"></td>
           <td class="border p-1"><input type="number" value="${item['數量']}" onchange="updateItem(${index}, '數量', this.value)" class="w-full text-center p-1 bg-transparent"></td>
           <td class="border p-1 text-center space-x-1">
-            <button onclick="moveItem(${index}, -1)" class="bg-gray-300 px-2 py-1 rounded hover:bg-gray-400">↑</button>
-            <button onclick="moveItem(${index}, 1)" class="bg-gray-300 px-2 py-1 rounded hover:bg-gray-400">↓</button>
+            <button onclick="moveItem(${index}, -1)" class="bg-gray-200 px-2 py-1 rounded hover:bg-gray-300">↑</button>
+            <button onclick="moveItem(${index}, 1)" class="bg-gray-200 px-2 py-1 rounded hover:bg-gray-300">↓</button>
             <button onclick="deleteItem(${index})" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">刪除</button>
           </td>
         `;
@@ -221,9 +271,7 @@
       const startDateInput = document.getElementById('start-date').value;
       if(!startDateInput) return alert('請先選擇起始日期');
       
-      const weeks = parseInt(document.getElementById('weeks-select').value);
-      
-      // 計算起始的星期一
+      // 無論選擇何日，列印時皆校正為該週星期一
       let d = new Date(startDateInput);
       const day = d.getDay() || 7; 
       d.setDate(d.getDate() - day + 1); 
@@ -231,7 +279,7 @@
       const printArea = document.getElementById('print-area');
       printArea.innerHTML = '';
 
-      for(let w = 0; w < weeks; w++) {
+      for(let w = 0; w < selectedWeeks; w++) {
         const weekStart = new Date(d);
         weekStart.setDate(weekStart.getDate() + (w * 7));
         
@@ -244,7 +292,7 @@
         }
 
         const page = document.createElement('div');
-        page.className = (w < weeks - 1) ? 'page-break' : '';
+        page.className = (w < selectedWeeks - 1) ? 'page-break' : '';
         
         let tableHTML = `
           <table class="print-table">
@@ -256,7 +304,7 @@
             </colgroup>
             <thead>
               <tr>
-                <th colspan="2" rowspan="2" style="font-size: 16pt;">項目</th>
+                <th colspan="2" rowspan="2" style="font-size: 14pt;">項目</th>
                 <th>日期</th>
                 <th>${dates[0]}</th><th>${dates[1]}</th><th>${dates[2]}</th><th>${dates[3]}</th><th>${dates[4]}</th>
               </tr>
@@ -270,7 +318,7 @@
 
         // 處理「器械」類別
         const instruments = items.filter(i => i['類別'] === '器械');
-        tableHTML += `<tr><td colspan="8" style="font-size: 14pt; letter-spacing: 1em;">器械</td></tr>`;
+        tableHTML += `<tr><td colspan="8" style="font-size: 13pt; letter-spacing: 1em;">器械</td></tr>`;
         
         let currentGrid = null;
         let gridSpan = 0;
@@ -294,7 +342,7 @@
 
         // 處理「其他」類別
         const others = items.filter(i => i['類別'] !== '器械');
-        tableHTML += `<tr><td colspan="8" style="font-size: 14pt; letter-spacing: 1em;">其他品項</td></tr>`;
+        tableHTML += `<tr><td colspan="8" style="font-size: 13pt; letter-spacing: 1em;">其他品項</td></tr>`;
         
         others.forEach(item => {
            tableHTML += `<tr>
@@ -307,7 +355,7 @@
         // 簽名欄
         tableHTML += `
             <tr class="signature-row">
-              <td colspan="3" style="font-size: 18pt; letter-spacing: 1em;">簽名</td>
+              <td colspan="3" style="font-size: 16pt; letter-spacing: 1em;">簽名</td>
               <td></td><td></td><td></td><td></td><td></td>
             </tr>
             </tbody>
@@ -321,8 +369,11 @@
       setTimeout(() => { window.print(); }, 300);
     }
 
-    // 網頁載入時自動讀取資料
-    window.onload = loadData;
+    // 網頁載入時初始化日期並讀取資料
+    window.onload = function() {
+      initDate();
+      loadData();
+    };
   </script>
 </body>
 </html>
