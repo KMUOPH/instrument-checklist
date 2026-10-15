@@ -1,37 +1,328 @@
-// 填入您剛才複製的 Google Apps Script 網址
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzwGKX1VXJY1EaWulhxdKUB-NUnIR1oSJwHa2xQFezah8-QkpUABkOIWpq6xsx4Tic_/exec'; 
-
-// 1. 從 Google Sheets 讀取資料
-async function loadDataFromCloud() {
-  try {
-    document.getElementById('loading-message').innerText = "載入雲端資料中...";
-    const response = await fetch(SCRIPT_URL);
-    const data = await response.json();
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>治療室點班單</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* 螢幕顯示模式：隱藏列印區 */
+    @media screen {
+      #print-area { display: none; }
+    }
     
-    // 將抓下來的資料轉換為您的網頁格式並渲染
-    inventoryItems = data; 
-    renderTable(); 
-  } catch (error) {
-    console.error("讀取失敗", error);
-  }
-}
+    /* 列印模式：隱藏操作介面，設定A4滿版 */
+    @media print {
+      body { background-color: white; padding: 0; margin: 0; }
+      #ui-area { display: none !important; }
+      #print-area { display: block; width: 100%; }
+      @page { size: A4; margin: 8mm; }
+      
+      .print-table { 
+        width: 100%; 
+        border-collapse: collapse; 
+        table-layout: fixed; 
+        font-size: 13pt; 
+      }
+      .print-table th, .print-table td { 
+        border: 1px solid black; 
+        text-align: center; 
+        padding: 6px 2px; 
+      }
+      .print-table th { background-color: #f9fafb; font-weight: normal; }
+      
+      /* 第一欄(格子)與第二欄(品項)的寬度微調 */
+      .col-grid { width: 8%; }
+      .col-name { width: 22%; }
+      .col-qty { width: 8%; }
+      
+      /* 簽名欄高度 */
+      .signature-row td { height: 60px; vertical-align: bottom; padding-bottom: 5px;}
+      .page-break { page-break-after: always; }
+    }
+  </style>
+</head>
+<body class="bg-gray-100 p-6">
 
-// 2. 將修改後的資料存回 Google Sheets
-async function saveDataToCloud() {
-  try {
-    document.getElementById('save-status').innerText = "儲存中...";
-    await fetch(SCRIPT_URL, {
-      method: 'POST',
-      // 這裡使用 text/plain 可避免跨網域 (CORS) 的 Preflight 阻擋問題
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(inventoryItems)
-    });
-    document.getElementById('save-status').innerText = "已同步至雲端！";
-  } catch (error) {
-    console.error("儲存失敗", error);
-    document.getElementById('save-status').innerText = "儲存失敗，請檢查網路";
-  }
-}
+  <!-- ================= 操作介面區 ================= -->
+  <div id="ui-area" class="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-md">
+    <h1 class="text-3xl font-bold text-gray-800 mb-2">治療室點班單系統</h1>
+    <p id="status-msg" class="text-blue-600 font-bold mb-6">狀態：讀取雲端資料中...</p>
+    
+    <div class="flex flex-wrap gap-4 items-end mb-8 bg-gray-50 p-4 rounded border">
+      <div>
+        <label class="block text-sm font-bold mb-1">選擇起始日期</label>
+        <input type="date" id="start-date" class="border border-gray-300 p-2 rounded">
+        <p class="text-xs text-gray-500 mt-1">系統會自動校正為當週星期一</p>
+      </div>
+      <div>
+        <label class="block text-sm font-bold mb-1">列印週數</label>
+        <select id="weeks-select" class="border border-gray-300 p-2 rounded">
+          <option value="4">4 週</option>
+          <option value="6">6 週</option>
+        </select>
+      </div>
+      <button onclick="generatePrint()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-2 rounded transition">
+        產生並列印表格
+      </button>
+      <button onclick="loadData()" class="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded transition ml-auto">
+        強制重新載入
+      </button>
+    </div>
 
-// 網頁載入時自動執行讀取
-window.onload = loadDataFromCloud;
+    <h2 class="text-xl font-bold mb-4">資料編輯區 (自動同步至 Google Sheets)</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full border-collapse border border-gray-300 text-sm">
+        <thead class="bg-gray-200">
+          <tr>
+            <th class="border p-2 w-20">類別</th>
+            <th class="border p-2 w-20">格子編號</th>
+            <th class="border p-2">品項名稱</th>
+            <th class="border p-2 w-20">數量</th>
+            <th class="border p-2 w-32">操作</th>
+          </tr>
+        </thead>
+        <tbody id="editor-tbody">
+          <!-- 資料由 JS 動態產生 -->
+        </tbody>
+        <tfoot class="bg-gray-100">
+          <tr>
+            <td class="border p-1">
+              <select id="new-cat" class="w-full p-1 border rounded"><option>器械</option><option>其他</option></select>
+            </td>
+            <td class="border p-1">
+              <input type="text" id="new-grid" class="w-full p-1 border rounded text-center" placeholder="如: 1">
+            </td>
+            <td class="border p-1">
+              <input type="text" id="new-name" class="w-full p-1 border rounded" placeholder="輸入品項名稱">
+            </td>
+            <td class="border p-1">
+              <input type="number" id="new-qty" class="w-full p-1 border rounded text-center" placeholder="數量">
+            </td>
+            <td class="border p-1 text-center">
+              <button onclick="addItem()" class="bg-indigo-500 text-white px-4 py-1 rounded hover:bg-indigo-600">新增</button>
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- ================= 列印隱藏區 ================= -->
+  <div id="print-area"></div>
+
+  <!-- ================= 核心邏輯 ================= -->
+  <script>
+    // 您專屬的 Google Apps Script 網址
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzwGKX1VXJY1EaWulhxdKUB-NUnIR1oSJwHa2xQFezah8-QkpUABkOIWpq6xsx4Tic_/exec';
+    let items = [];
+
+    // 1. 從 Google Sheets 讀取資料
+    async function loadData() {
+      document.getElementById('status-msg').innerText = "狀態：讀取雲端資料中...";
+      try {
+        const response = await fetch(SCRIPT_URL);
+        const data = await response.json();
+        // 依照「排序」欄位重新排序
+        items = data.sort((a, b) => parseInt(a['排序'] || 0) - parseInt(b['排序'] || 0));
+        renderEditor();
+        document.getElementById('status-msg').innerText = "狀態：✅ 已與雲端同步";
+      } catch (error) {
+        console.error(error);
+        document.getElementById('status-msg').innerText = "狀態：❌ 讀取失敗，請檢查網路連線";
+      }
+    }
+
+    // 2. 儲存資料到 Google Sheets
+    async function saveData() {
+      document.getElementById('status-msg').innerText = "狀態：儲存至雲端中...";
+      // 確保排序欄位正確對應陣列順序
+      items.forEach((item, index) => item['排序'] = index + 1);
+      
+      try {
+        await fetch(SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(items)
+        });
+        document.getElementById('status-msg').innerText = "狀態：✅ 已與雲端同步";
+        renderEditor();
+      } catch (error) {
+        console.error(error);
+        document.getElementById('status-msg').innerText = "狀態：❌ 儲存失敗，資料尚未同步";
+      }
+    }
+
+    // 3. 渲染編輯器表格
+    function renderEditor() {
+      const tbody = document.getElementById('editor-tbody');
+      tbody.innerHTML = '';
+      items.forEach((item, index) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="border p-1"><input type="text" value="${item['類別']}" onchange="updateItem(${index}, '類別', this.value)" class="w-full text-center p-1 bg-transparent"></td>
+          <td class="border p-1"><input type="text" value="${item['格子編號'] || ''}" onchange="updateItem(${index}, '格子編號', this.value)" class="w-full text-center p-1 bg-transparent"></td>
+          <td class="border p-1"><input type="text" value="${item['品項']}" onchange="updateItem(${index}, '品項', this.value)" class="w-full p-1 bg-transparent"></td>
+          <td class="border p-1"><input type="number" value="${item['數量']}" onchange="updateItem(${index}, '數量', this.value)" class="w-full text-center p-1 bg-transparent"></td>
+          <td class="border p-1 text-center space-x-1">
+            <button onclick="moveItem(${index}, -1)" class="bg-gray-300 px-2 py-1 rounded hover:bg-gray-400">↑</button>
+            <button onclick="moveItem(${index}, 1)" class="bg-gray-300 px-2 py-1 rounded hover:bg-gray-400">↓</button>
+            <button onclick="deleteItem(${index})" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">刪除</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // 編輯與操作功能
+    function updateItem(index, key, value) { 
+      items[index][key] = value; 
+      saveData(); 
+    }
+    
+    function addItem() {
+      const cat = document.getElementById('new-cat').value;
+      const grid = document.getElementById('new-grid').value;
+      const name = document.getElementById('new-name').value;
+      const qty = document.getElementById('new-qty').value;
+      
+      if(!name) return alert('請輸入品項名稱');
+      
+      items.push({
+        '類別': cat, 
+        '排序': items.length + 1, 
+        '格子編號': grid, 
+        '品項': name, 
+        '數量': qty
+      });
+      
+      document.getElementById('new-name').value = '';
+      document.getElementById('new-qty').value = '';
+      saveData();
+    }
+    
+    function deleteItem(index) { 
+      if(confirm('確定要刪除此品項嗎？')) {
+        items.splice(index, 1); 
+        saveData(); 
+      }
+    }
+    
+    function moveItem(index, direction) {
+      if(index + direction < 0 || index + direction >= items.length) return;
+      const temp = items[index];
+      items[index] = items[index + direction];
+      items[index + direction] = temp;
+      saveData();
+    }
+
+    // 4. 產生列印排版
+    function generatePrint() {
+      const startDateInput = document.getElementById('start-date').value;
+      if(!startDateInput) return alert('請先選擇起始日期');
+      
+      const weeks = parseInt(document.getElementById('weeks-select').value);
+      
+      // 計算起始的星期一
+      let d = new Date(startDateInput);
+      const day = d.getDay() || 7; 
+      d.setDate(d.getDate() - day + 1); 
+
+      const printArea = document.getElementById('print-area');
+      printArea.innerHTML = '';
+
+      for(let w = 0; w < weeks; w++) {
+        const weekStart = new Date(d);
+        weekStart.setDate(weekStart.getDate() + (w * 7));
+        
+        // 產生週一至週五的日期標籤 (MM/DD)
+        let dates = [];
+        for(let i = 0; i < 5; i++) {
+           let cur = new Date(weekStart);
+           cur.setDate(cur.getDate() + i);
+           dates.push(`${cur.getMonth() + 1}/${cur.getDate()}`);
+        }
+
+        const page = document.createElement('div');
+        page.className = (w < weeks - 1) ? 'page-break' : '';
+        
+        let tableHTML = `
+          <table class="print-table">
+            <colgroup>
+              <col class="col-grid">
+              <col class="col-name">
+              <col class="col-qty">
+              <col span="5" style="width:12.4%;">
+            </colgroup>
+            <thead>
+              <tr>
+                <th colspan="2" rowspan="2" style="font-size: 16pt;">項目</th>
+                <th>日期</th>
+                <th>${dates[0]}</th><th>${dates[1]}</th><th>${dates[2]}</th><th>${dates[3]}</th><th>${dates[4]}</th>
+              </tr>
+              <tr>
+                <th>數量</th>
+                <th>星期一</th><th>星期二</th><th>星期三</th><th>星期四</th><th>星期五</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        // 處理「器械」類別
+        const instruments = items.filter(i => i['類別'] === '器械');
+        tableHTML += `<tr><td colspan="8" style="font-size: 14pt; letter-spacing: 1em;">器械</td></tr>`;
+        
+        let currentGrid = null;
+        let gridSpan = 0;
+        
+        instruments.forEach((item, idx) => {
+           let gridNum = item['格子編號'] || '';
+           tableHTML += `<tr>`;
+           
+           // 判斷是否需要合併儲存格 (Rowspan)
+           if(gridNum !== currentGrid || gridNum === "") {
+             gridSpan = instruments.filter(i => (i['格子編號'] || '') === gridNum && gridNum !== "").length;
+             if(gridSpan === 0) gridSpan = 1;
+             tableHTML += `<td rowspan="${gridSpan}">${gridNum}</td>`;
+             currentGrid = gridNum;
+           }
+           
+           tableHTML += `<td style="text-align: left; padding-left: 10px;">${item['品項']}</td>
+                         <td>${item['數量']}</td>
+                         <td></td><td></td><td></td><td></td><td></td></tr>`;
+        });
+
+        // 處理「其他」類別
+        const others = items.filter(i => i['類別'] !== '器械');
+        tableHTML += `<tr><td colspan="8" style="font-size: 14pt; letter-spacing: 1em;">其他品項</td></tr>`;
+        
+        others.forEach(item => {
+           tableHTML += `<tr>
+                          <td colspan="2" style="text-align: left; padding-left: 10px;">${item['品項']}</td>
+                          <td>${item['數量']}</td>
+                          <td></td><td></td><td></td><td></td><td></td>
+                         </tr>`;
+        });
+
+        // 簽名欄
+        tableHTML += `
+            <tr class="signature-row">
+              <td colspan="3" style="font-size: 18pt; letter-spacing: 1em;">簽名</td>
+              <td></td><td></td><td></td><td></td><td></td>
+            </tr>
+            </tbody>
+          </table>
+        `;
+        page.innerHTML = tableHTML;
+        printArea.appendChild(page);
+      }
+
+      // 觸發列印
+      setTimeout(() => { window.print(); }, 300);
+    }
+
+    // 網頁載入時自動讀取資料
+    window.onload = loadData;
+  </script>
+</body>
+</html>
