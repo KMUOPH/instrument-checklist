@@ -15,54 +15,61 @@
       #print-area { display: none; }
     }
     
+    /* 成功特效動畫 */
+    @keyframes highlightFade {
+      0% { background-color: #dbeafe; } /* tailwind blue-100 */
+      100% { background-color: transparent; }
+    }
+    .highlight-row {
+      animation: highlightFade 1.2s ease-out;
+    }
+    
     /* 列印模式 */
     @media print {
-      /* 重置所有外部空間 */
       html, body { background-color: white; padding: 0; margin: 0; width: 210mm; }
       #ui-area { display: none !important; }
       #print-area { display: block; width: 100%; }
       
-      /* ✨ 終極防線：強制關閉瀏覽器所有預設邊界，不讓 Chrome 搗亂 ✨ */
+      /* 強制關閉瀏覽器列印預設邊界 */
       @page { size: A4; margin: 0mm !important; } 
       
-      /* 實體 A4 畫布容器 */
+      /* 實體 A4 畫布 */
       .print-page {
         width: 210mm;
-        /* 設定 296.5mm (保留 0.5mm 緩衝)，防止 Chrome 判定超過 1 頁產生空白紙 */
-        height: 296.5mm; 
+        height: 296mm; 
         box-sizing: border-box;
         position: relative;
         page-break-after: always;
         page-break-inside: avoid;
         overflow: hidden;
+        /* 強制上邊界為 10mm */
+        padding-top: 10mm; 
       }
       .print-page.last-page {
         page-break-after: auto; 
       }
 
-      /* ✨ 絕對物理邊界：利用 Padding 鎖死留白空間 ✨ */
-      /* 奇數頁(正)：上 10mm, 右 10mm, 下 10mm, 左 20mm (裝訂) */
-      .page-odd { padding: 10mm 10mm 10mm 20mm; }
-      /* 偶數頁(背)：上 10mm, 右 20mm (裝訂), 下 10mm, 左 10mm */
-      .page-even { padding: 10mm 20mm 10mm 10mm; }
+      /* 奇偶頁左右對稱裝訂線 */
+      .page-odd { padding-left: 20mm; padding-right: 10mm; }
+      .page-even { padding-left: 10mm; padding-right: 20mm; }
 
       /* 打洞對齊小三角形 */
       .punch-mark {
         position: absolute;
         top: 50%; 
         transform: translateY(-50%);
-        left: 6mm; /* 距離紙張最左側絕對邊緣 0.6 公分 */
+        left: 6mm; 
         width: 0; 
         height: 0;
         border-top: 5px solid transparent;
         border-bottom: 5px solid transparent;
-        border-right: 7px solid #d1d5db; /* 淡灰色，尖角朝左 */
+        border-right: 7px solid #d1d5db; 
       }
       
-      /* 表格設定：height 100% 會自動撐滿扣掉 10mm 上下 padding 後的空間，達到完美垂直置中 */
+      /* 絕對鎖死表格高度為 276mm，上下自動對稱各剩 10mm 白邊 */
       .print-table { 
         width: 100%; 
-        height: 100%; 
+        height: 276mm; 
         border-collapse: collapse; 
         table-layout: fixed; 
         font-size: 12pt; 
@@ -82,30 +89,33 @@
       .col-name { width: 18%; }
       .col-qty { width: 10%; }
       
-      /* ✨ 加大簽名欄高度 ✨ */
-      .signature-row td { height: 60px; vertical-align: middle; padding-bottom: 0;}
+      /* 簽名列略高於品項列 */
+      .signature-row td { height: 45px; vertical-align: middle; padding-bottom: 0;}
     }
   </style>
 </head>
 <body class="bg-gray-100 p-4">
 
-  <!-- ================= 極致壓縮版操作介面區 ================= -->
+  <!-- ================= 系統操作介面區 ================= -->
   <div id="ui-area" class="max-w-xl mx-auto bg-white p-5 rounded-lg shadow-md">
     
     <div class="flex items-center justify-between mb-4">
-      <h1 class="text-xl font-bold text-gray-800">治療室點班單系統</h1>
-      <span id="status-msg" class="text-xs font-medium text-gray-600 bg-gray-100 border px-2 py-0.5 rounded-full border-transparent">載入中...</span>
+      <h1 class="text-xl font-bold text-gray-800">治療室點班單列印</h1>
+      <!-- 右上角圓形重新載入按鈕 -->
+      <button onclick="loadData(this)" class="w-8 h-8 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-full transition shadow-sm" title="重新載入">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+      </button>
     </div>
     
     <div class="flex items-end gap-4 mb-5 bg-gray-50 p-3 rounded border">
       
-      <!-- 起始日期 -->
       <div class="flex flex-col gap-1.5">
         <label class="text-[11px] font-bold text-gray-500 leading-none">起始日期 (週一)</label>
-        <input type="date" id="start-date" onchange="checkMonday()" class="border border-gray-300 px-2 rounded h-8 w-32 text-xs">
+        <input type="date" id="start-date" onchange="checkMonday()" class="border border-gray-300 px-2 rounded h-8 w-32 text-xs transition">
       </div>
       
-      <!-- 單列週數膠囊陣列 -->
       <div class="flex flex-col gap-1.5 ml-1">
         <label class="text-[11px] font-bold text-gray-500 leading-none">列印週數</label>
         <div class="flex gap-1" id="week-pills">
@@ -116,15 +126,13 @@
         </div>
       </div>
 
-      <!-- 右側按鈕群 -->
       <div class="ml-auto flex gap-2">
-        <button onclick="loadData()" class="bg-gray-500 hover:bg-gray-600 text-white font-bold px-3 h-8 rounded transition shadow text-xs">重新載入</button>
-        <button onclick="generatePrint()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 h-8 rounded transition shadow text-xs">列印</button>
+        <button onclick="generatePrint()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 h-8 rounded transition shadow text-xs">列印</button>
       </div>
     </div>
 
     <div class="flex items-end gap-3 mb-3">
-      <h2 class="text-lg font-bold text-gray-800">資料編輯區</h2>
+      <h2 class="text-lg font-bold text-gray-800">品項編輯區</h2>
     </div>
 
     <div class="overflow-x-auto">
@@ -160,10 +168,10 @@
             </td>
             <td class="border p-1">
               <div class="flex justify-center items-center gap-1">
-                <button onclick="addItem()" class="bg-blue-600 text-white flex-1 py-1 rounded hover:bg-blue-700 transition shadow-sm font-bold text-xs whitespace-nowrap">新增</button>
-                <button onclick="autoSort()" class="bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 font-bold flex-1 py-1 rounded transition shadow-sm whitespace-nowrap text-xs" title="排序">
-                  排序
-                </button>
+                <!-- 新增按鈕 -->
+                <button id="btn-add" onclick="addItem(this)" class="bg-blue-600 text-white flex-1 py-1 rounded hover:bg-blue-700 transition shadow-sm font-bold text-xs whitespace-nowrap">新增</button>
+                <!-- 排序按鈕 -->
+                <button id="btn-sort" onclick="autoSort(this)" class="bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 font-bold flex-1 py-1 rounded transition shadow-sm whitespace-nowrap text-xs" title="排序">排序</button>
               </div>
             </td>
           </tr>
@@ -181,6 +189,7 @@
     let items = [];
     let selectedWeeks = 6; 
     let editingIndex = -1;
+    let highlightIndex = -1; // 用來標記需要播放動畫的列
 
     function initDate() {
       const d = new Date();
@@ -196,7 +205,6 @@
     function checkMonday() {
       const input = document.getElementById('start-date');
       if (!input.value) return;
-      
       let d = new Date(input.value);
       const day = d.getDay();
       
@@ -204,7 +212,6 @@
         alert("起始日期必須是星期一！系統已自動為您校正。");
         const dayCalc = day || 7; 
         d.setDate(d.getDate() - dayCalc + 1); 
-        
         const yyyy = d.getFullYear();
         const mm = String(d.getMonth() + 1).padStart(2, '0');
         const dd = String(d.getDate()).padStart(2, '0');
@@ -224,18 +231,6 @@
       });
     }
 
-    function setStatus(msg, isError = false) {
-      const el = document.getElementById('status-msg');
-      el.innerText = msg;
-      if(isError) {
-        el.className = "text-xs font-medium text-red-600 bg-red-50 border px-2 py-0.5 rounded-full border-red-200";
-      } else if (msg === '已同步') {
-        el.className = "text-xs font-medium text-green-700 bg-green-50 border px-2 py-0.5 rounded-full border-green-200";
-      } else {
-        el.className = "text-xs font-medium text-gray-600 bg-gray-100 border px-2 py-0.5 rounded-full border-transparent";
-      }
-    }
-
     function handleCatChange() {
       const cat = document.getElementById('new-cat').value;
       const gridInp = document.getElementById('new-grid');
@@ -248,7 +243,6 @@
         gridInp.disabled = false;
         gridInp.classList.remove('bg-gray-200');
         gridInp.placeholder = '1';
-        
         let maxGrid = 0;
         items.filter(i => i['類別'] === '器械').forEach(i => {
           let g = parseInt(i['編號']);
@@ -258,8 +252,13 @@
       }
     }
 
-    async function loadData() {
-      setStatus("載入中...");
+    // 讀取資料 (包含右上角旋轉特效)
+    async function loadData(btn) {
+      let svg;
+      if(btn) {
+        svg = btn.querySelector('svg');
+        if(svg) svg.classList.add('animate-spin');
+      }
       try {
         const response = await fetch(SCRIPT_URL);
         const data = await response.json();
@@ -273,17 +272,19 @@
         }).sort((a, b) => parseInt(a['排序'] || 0) - parseInt(b['排序'] || 0));
         
         editingIndex = -1;
+        highlightIndex = -1;
         renderEditor();
         handleCatChange(); 
-        setStatus("已同步");
       } catch (error) {
         console.error(error);
-        setStatus("同步失敗", true);
+        alert("載入失敗，請檢查網路連線");
+      } finally {
+        if(svg) svg.classList.remove('animate-spin');
       }
     }
 
+    // 核心儲存邏輯 (排序號碼在此時重整)
     async function saveData() {
-      setStatus("儲存中...");
       items.forEach((item, index) => item['排序'] = index + 1);
       try {
         await fetch(SCRIPT_URL, {
@@ -291,27 +292,36 @@
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify(items)
         });
-        setStatus("已同步");
-        renderEditor();
-        handleCatChange(); 
       } catch (error) {
         console.error(error);
-        setStatus("同步失敗", true);
+        alert("同步失敗，請檢查網路連線");
       }
     }
 
-    function moveItem(index, direction) {
+    // 上下移動邏輯 (包含點擊即時變色回饋)
+    async function moveItem(index, direction) {
       if (index + direction < 0 || index + direction >= items.length) return;
+      
+      // 點擊當下，立刻讓該列顯示半透明淡藍色 (表示處理中)
+      const tr = document.getElementById(`row-${index}`);
+      if(tr) {
+         tr.classList.add('bg-blue-100');
+         tr.style.opacity = '0.6';
+      }
 
       const sourceItem = items[index];
       const targetItem = items[index + direction];
       const sourceCat = sourceItem['類別'];
       const targetCat = targetItem['類別'];
 
-      if (sourceCat !== targetCat) return; 
+      if (sourceCat !== targetCat) {
+         if(tr) { tr.classList.remove('bg-blue-100'); tr.style.opacity = '1'; }
+         return; 
+      }
 
       const sourceGrid = sourceItem['編號'] || '';
       const targetGrid = targetItem['編號'] || '';
+      const movingItem = items[index]; // 記錄正在移動的物件
 
       if (sourceGrid === targetGrid) {
         [items[index], items[index + direction]] = [items[index + direction], items[index]];
@@ -333,11 +343,17 @@
         }
       }
 
-      items.forEach((item, idx) => item['排序'] = idx + 1);
-      autoSort(); 
+      doLocalSort(); 
+      const newIndex = items.findIndex(i => i === movingItem); // 找出移動後的新位置
+      
+      await saveData(); // 背景儲存
+      
+      highlightIndex = newIndex; // 標記為成功動畫
+      renderEditor(); // 重新渲染畫面並播放閃爍動畫
     }
 
-    function autoSort() {
+    // 本地排序演算法
+    function doLocalSort() {
       items.sort((a, b) => {
         if (a['類別'] !== b['類別']) return a['類別'] === '器械' ? -1 : 1;
         const numA = parseInt(a['編號'], 10);
@@ -353,16 +369,76 @@
         
         return (a['排序'] || 0) - (b['排序'] || 0);
       });
-      editingIndex = -1;
-      saveData();
     }
 
+    // 點擊排序按鈕
+    async function autoSort(btn) {
+      btn.innerHTML = '處理中...';
+      btn.disabled = true;
+      
+      doLocalSort();
+      await saveData();
+      
+      highlightIndex = -1; // 排序全體，不特別 highlight 單行
+      btn.innerHTML = '排序';
+      btn.disabled = false;
+      renderEditor();
+    }
+
+    // 新增品項邏輯
+    async function addItem(btn) {
+      const cat = document.getElementById('new-cat').value;
+      const grid = document.getElementById('new-grid').value;
+      const name = document.getElementById('new-name').value;
+      const qty = document.getElementById('new-qty').value;
+      
+      if(!name) return alert('請輸入品項名稱');
+      
+      btn.innerHTML = '處理中...';
+      btn.disabled = true;
+      
+      items.push({
+        '類別': cat, '排序': items.length + 1, 
+        '編號': grid, '格子編號': grid, 
+        '品項': name, '數量': qty
+      });
+      
+      await saveData();
+
+      highlightIndex = items.length - 1; // Highlight 新增在最下方的項目
+      document.getElementById('new-name').value = '';
+      document.getElementById('new-qty').value = '';
+      
+      btn.innerHTML = '新增';
+      btn.disabled = false;
+      
+      renderEditor();
+      handleCatChange();
+    }
+
+    // 刪除品項
+    async function deleteItem(index) { 
+      if(confirm('確定要刪除此品項嗎？')) {
+        const tr = document.getElementById(`row-${index}`);
+        if(tr) { tr.style.opacity = '0.3'; tr.classList.add('bg-red-50'); } // 刪除前視覺提示
+        
+        items.splice(index, 1); 
+        await saveData(); 
+        renderEditor(); 
+      }
+    }
+
+    // 渲染編輯區
     function renderEditor() {
       const tbody = document.getElementById('editor-tbody');
       tbody.innerHTML = '';
       items.forEach((item, index) => {
         const gridVal = item['編號'] || '';
         const tr = document.createElement('tr');
+        tr.id = `row-${index}`;
+        
+        // 判斷是否為正在 highlight 的列
+        const isHighlight = (highlightIndex === index);
         
         if (editingIndex === index) {
           tr.className = "bg-yellow-50";
@@ -378,13 +454,14 @@
             <td class="border p-1"><input type="number" id="edit-qty-${index}" value="${item['數量']}" class="w-full text-center p-1 border rounded text-xs"></td>
             <td class="border p-1">
               <div class="flex justify-center items-center gap-1">
-                <button onclick="saveEdit(${index})" class="bg-blue-600 text-white flex-1 py-1 rounded hover:bg-blue-700 shadow-sm text-xs font-bold whitespace-nowrap">儲存</button>
-                <button onclick="cancelEdit()" class="bg-gray-400 text-white flex-1 py-1 rounded hover:bg-gray-500 shadow-sm text-xs whitespace-nowrap">取消</button>
+                <button onclick="saveEdit(${index}, this)" class="bg-blue-600 text-white flex-1 py-1 rounded hover:bg-blue-700 shadow-sm text-xs font-bold whitespace-nowrap transition">儲存</button>
+                <button onclick="cancelEdit()" class="bg-gray-400 text-white flex-1 py-1 rounded hover:bg-gray-500 shadow-sm text-xs whitespace-nowrap transition">取消</button>
               </div>
             </td>
           `;
         } else {
-          tr.className = "hover:bg-gray-50";
+          // 若有 highlight 特效，套用自訂動畫 class
+          tr.className = isHighlight ? "highlight-row transition-colors" : "hover:bg-gray-50 transition-colors";
           tr.innerHTML = `
             <td class="border p-1 text-center text-gray-700">${item['類別']}</td>
             <td class="border p-1 text-center font-bold text-blue-600 text-sm">${gridVal}</td>
@@ -415,46 +492,24 @@
     function enableEdit(index) { editingIndex = index; renderEditor(); }
     function cancelEdit() { editingIndex = -1; renderEditor(); }
     
-    function saveEdit(index) {
+    async function saveEdit(index, btn) {
+      btn.innerHTML = '處理中...';
+      btn.disabled = true;
+      
       items[index]['類別'] = document.getElementById(`edit-cat-${index}`).value;
       const newGrid = document.getElementById(`edit-grid-${index}`).value;
       items[index]['編號'] = newGrid;
       items[index]['格子編號'] = newGrid;
       items[index]['品項'] = document.getElementById(`edit-name-${index}`).value;
       items[index]['數量'] = document.getElementById(`edit-qty-${index}`).value;
+      
+      await saveData();
       editingIndex = -1;
-      saveData();
-    }
-    
-    function addItem() {
-      const cat = document.getElementById('new-cat').value;
-      const grid = document.getElementById('new-grid').value;
-      const name = document.getElementById('new-name').value;
-      const qty = document.getElementById('new-qty').value;
-      
-      if(!name) return alert('請輸入品項名稱');
-      
-      items.push({
-        '類別': cat, 
-        '排序': items.length + 1, 
-        '編號': grid, 
-        '格子編號': grid, 
-        '品項': name, 
-        '數量': qty
-      });
-      
-      document.getElementById('new-name').value = '';
-      document.getElementById('new-qty').value = '';
-      saveData();
-    }
-    
-    function deleteItem(index) { 
-      if(confirm('確定要刪除此品項嗎？')) {
-        items.splice(index, 1); 
-        saveData(); 
-      }
+      highlightIndex = index; // 編輯後也加上特效
+      renderEditor();
     }
 
+    // 列印輸出
     function generatePrint() {
       const startDateInput = document.getElementById('start-date').value;
       if(!startDateInput) return alert('請先選擇起始日期');
@@ -479,7 +534,6 @@
 
         const page = document.createElement('div');
         
-        // 奇數偶數頁判斷：加入 page-odd / page-even 實體內縮 class
         const isOddPage = (w % 2 === 0);
         page.className = 'print-page ' + (isOddPage ? 'page-odd' : 'page-even');
         
