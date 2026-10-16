@@ -17,66 +17,68 @@
     
     /* 成功特效動畫 */
     @keyframes highlightFade {
-      0% { background-color: #c7d2fe; } /* indigo-200 */
+      0% { background-color: #c7d2fe; } 
       100% { background-color: transparent; }
     }
-    /* 動畫期間強制套用背景色，不受 hover 干擾 */
     .highlight-row {
       animation: highlightFade 1.2s ease-out forwards;
     }
     
     /* ==================================================
-       列印模式：終極零誤差排版
+       列印模式：純物理公分絕對鎖定法
        ================================================== */
     @media print {
       html, body { background-color: white; padding: 0; margin: 0; }
       #ui-area { display: none !important; }
-      #print-area { display: block; width: 100%; }
+      #print-area { display: block; width: 100%; margin: 0; padding: 0; }
       
       /* ✨ 1. 徹底封殺 Chrome 預設邊界與頁首/頁尾 ✨ */
       @page { size: A4; margin: 0mm !important; } 
       
-      /* ✨ 2. 實體 A4 畫布，接管所有排版 ✨ */
+      /* ✨ 2. 實體 A4 畫布：210mm x 297mm 絕對鎖死 ✨ */
       .print-page {
-        width: 210mm;
-        height: 297mm; /* 絕對鎖定 A4 高度 */
-        box-sizing: border-box;
+        width: 210mm !important;
+        height: 297mm !important; 
+        max-height: 297mm !important;
+        box-sizing: border-box !important;
         position: relative;
         page-break-after: always;
         page-break-inside: avoid;
-        overflow: hidden; /* 防止任何內容溢出產生空白頁 */
+        overflow: hidden; 
       }
       .print-page.last-page {
         page-break-after: auto; 
       }
 
-      /* 
-         ✨ 3. 利用 Padding 繪製精準白邊 (上下永遠 10mm，左右自動對稱) 
-         這樣表格的高度自動就是 297 - 10 - 10 = 277mm，保證絕對置中！
-      */
-      /* 奇數頁：左側裝訂 20mm */
-      .page-odd { padding: 10mm 10mm 10mm 20mm; }
-      /* 偶數頁：右側裝訂 20mm */
-      .page-even { padding: 10mm 20mm 10mm 10mm; }
+      /* ✨ 3. 裝訂邊界控制：絕對不會再偏移 ✨ */
+      /* 奇數頁：左 20mm, 右 10mm */
+      .page-odd { padding: 10mm 10mm 10mm 20mm !important; }
+      /* 偶數頁：左 10mm, 右 20mm */
+      .page-even { padding: 10mm 20mm 10mm 10mm !important; }
 
-      /* ✨ 4. 加大版打洞三角形 (畫在 padding 留白區內，保證不被裁切) */
+      /* ✨ 4. 淡淡灰色的打洞三角形 ✨ */
       .punch-mark {
         position: absolute;
         top: 50%; 
         transform: translateY(-50%);
-        left: 6mm; /* 距離紙張左邊緣 0.6 公分 */
+        left: 5mm; /* 距離紙張左物理邊緣 5mm */
         width: 0; 
         height: 0;
-        /* 加大的三角形，尖角朝左 ◀ */
-        border-top: 7px solid transparent;
-        border-bottom: 7px solid transparent;
-        border-right: 10px solid #9ca3af; /* 灰色 */
+        border-top: 8px solid transparent;
+        border-bottom: 8px solid transparent;
+        border-right: 12px solid #cbd5e1; /* 淡灰色，大小適中 */
+        z-index: 10;
       }
       
-      /* 表格設定：自動撐滿扣掉白邊後的剩餘空間 */
+      /* ✨ 5. 終極防護：強制寫死表格寬高，逼迫邊界絕對精準 ✨ 
+         寬度：210 - 20 - 10 = 180mm
+         高度：297 - 10 - 10 = 277mm 
+      */
       .print-table { 
-        width: 100%; 
-        height: 100%; 
+        width: 180mm !important; 
+        height: 277mm !important; 
+        max-width: 180mm !important;
+        max-height: 277mm !important;
         border-collapse: collapse; 
         table-layout: fixed; 
         font-size: 12pt; 
@@ -96,7 +98,7 @@
       .col-name { width: 18%; }
       .col-qty { width: 10%; }
       
-      .signature-row td { height: 60px; vertical-align: middle; padding-bottom: 0;}
+      .signature-row td { height: 60px !important; vertical-align: middle; padding-bottom: 0;}
     }
   </style>
 </head>
@@ -107,11 +109,6 @@
     
     <div class="flex items-center justify-between mb-4">
       <h1 class="text-xl font-bold text-gray-800">治療室點班單列印</h1>
-      <button onclick="loadData(this)" class="w-8 h-8 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-full transition shadow-sm" title="重新載入">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-        </svg>
-      </button>
     </div>
     
     <div class="flex items-end gap-4 mb-5 bg-gray-50 p-3 rounded border">
@@ -135,14 +132,22 @@
       </div>
     </div>
 
-    <!-- ✨ 可折疊的編輯區標題 ✨ -->
-    <div class="flex items-center gap-2 mb-3 cursor-pointer select-none" onclick="toggleEditor()">
-      <span id="editor-toggle-icon" class="text-gray-400 transform transition-transform duration-200 text-sm">▶</span>
-      <h2 class="text-lg font-bold text-gray-800">品項編輯區</h2>
+    <!-- ✨ 編輯區標題與重整按鈕 ✨ -->
+    <div class="flex items-center gap-2 mb-3 select-none">
+      <span id="editor-toggle-icon" class="text-gray-400 transform transition-transform duration-200 text-sm cursor-pointer" onclick="toggleEditor()">▶</span>
+      <h2 class="text-lg font-bold text-gray-800 cursor-pointer" onclick="toggleEditor()">品項編輯區</h2>
+      
+      <!-- 重整按鈕移至此處 -->
+      <button onclick="loadData(this)" class="ml-1 w-6 h-6 flex items-center justify-center bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-full transition shadow-sm" title="重新載入">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+      </button>
+
       <span id="status-msg" class="ml-auto text-[10px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full border-transparent">讀取中...</span>
     </div>
 
-    <!-- ✨ 編輯區容器 (預設隱藏) ✨ -->
+    <!-- 編輯區容器 (預設隱藏) -->
     <div id="editor-content" class="hidden">
       <div class="overflow-x-auto pb-4">
         <table class="w-full border-collapse border border-gray-300 text-xs">
@@ -231,7 +236,6 @@
       });
     }
 
-    // ✨ 控制編輯區折疊/展開 ✨
     function toggleEditor() {
       const content = document.getElementById('editor-content');
       const icon = document.getElementById('editor-toggle-icon');
@@ -320,7 +324,6 @@
     async function moveItem(index, direction) {
       if (index + direction < 0 || index + direction >= items.length) return;
       
-      // ✨ 點擊當下，立刻強制覆蓋為靛藍色 (移除 hover 干擾) ✨
       const tr = document.getElementById(`row-${index}`);
       if(tr) tr.className = 'bg-indigo-200 transition-colors duration-300';
 
@@ -328,7 +331,7 @@
       const targetItem = items[index + direction];
       
       if (sourceItem['類別'] !== targetItem['類別']) {
-         renderEditor(); // 若無效操作，直接恢復
+         renderEditor(); 
          return; 
       }
 
@@ -440,7 +443,6 @@
         const currentGrid = item['編號'] || '';
         const currentCat = item['類別'];
         
-        // ✨ 同編號視覺隱藏邏輯：如果是同組的後續項目，直接留白 ✨
         const isSameGroup = (currentCat === prevCat && currentGrid === prevGrid && currentGrid !== '');
         const displayGrid = isSameGroup ? '' : currentGrid;
 
@@ -469,7 +471,6 @@
             </td>
           `;
         } else {
-          // 若有 highlight 特效，就不套用 hover，避免滑鼠移動干擾動畫
           tr.className = isHighlight ? "highlight-row" : "hover:bg-gray-50 transition-colors duration-200";
           tr.innerHTML = `
             <td class="border p-1 text-center text-gray-700 text-xs">${currentCat}</td>
@@ -548,7 +549,6 @@
           page.classList.add('last-page');
         }
         
-        // 僅第一頁產生打洞標記
         if (w === 0) {
           const punchHole = document.createElement('div');
           punchHole.className = 'punch-mark';
