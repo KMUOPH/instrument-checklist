@@ -432,8 +432,9 @@
       let prevGrid = null;
 
       items.forEach((item, index) => {
-        const currentGrid = item['編號'] || '';
-        const currentCat = item['類別'];
+        // ✨ 修正：強制轉為字串並去除空白，解決數字 15 與文字 "15" 判斷失敗的問題
+        const currentGrid = String(item['編號'] || '').trim();
+        const currentCat = String(item['類別'] || '').trim();
         
         const isSameGroup = (currentCat === prevCat && currentGrid === prevGrid && currentGrid !== '');
         const displayGrid = isSameGroup ? '' : currentGrid;
@@ -501,12 +502,22 @@
       btn.innerHTML = '處理中...'; btn.disabled = true;
       items[index]['類別'] = document.getElementById(`edit-cat-${index}`).value;
       const newGrid = document.getElementById(`edit-grid-${index}`).value;
-      items[index]['編號'] = newGrid; items[index]['格子編號'] = newGrid;
+      items[index]['編號'] = newGrid; 
+      items[index]['格子編號'] = newGrid;
       items[index]['品項'] = document.getElementById(`edit-name-${index}`).value;
       items[index]['數量'] = document.getElementById(`edit-qty-${index}`).value;
       
+      // ✨ 修正：儲存編輯後，重新賦予排序編號並執行自動排序
+      items.forEach((item, idx) => item['排序'] = idx + 1);
+      doLocalSort(); 
+      
       await saveData();
-      editingIndex = -1; highlightIndex = index; 
+      
+      // 找出編輯後的項目新位置，給予動畫提示
+      const editedItem = items.find(i => i['品項'] === document.getElementById(`edit-name-${index}`).value && i['編號'] === newGrid);
+      editingIndex = -1; 
+      highlightIndex = items.indexOf(editedItem); 
+      
       renderEditor();
     }
 
