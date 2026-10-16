@@ -32,14 +32,14 @@
       #ui-area { display: none !important; }
       #print-area { display: block; width: 100%; margin: 0; padding: 0; }
       
-      /* ✨ 徹底關閉瀏覽器預設邊界，消滅頁首頁尾 ✨ */
+      /* 徹底關閉瀏覽器預設邊界，消滅頁首頁尾 */
       @page { size: A4; margin: 0mm !important; } 
       
-      /* ✨ 實體 A4 畫布：每一頁獨立鎖死尺寸，防止溢出 ✨ */
+      /* 實體 A4 畫布：每一頁獨立鎖死尺寸，防止溢出 */
       .print-page {
         width: 210mm !important;
-        height: 296.5mm !important; /* 扣除 0.5mm 緩衝，絕對防止多印空白頁 */
-        position: relative; /* 開啟絕對定位的基準點 */
+        height: 296.5mm !important; 
+        position: relative; 
         page-break-after: always;
         page-break-inside: avoid;
         overflow: hidden; 
@@ -49,13 +49,13 @@
         page-break-after: auto; 
       }
 
-      /* ✨ 絕對座標內容區：無視 Chrome 排版 Bug，強制釘死在紙張的正中央 ✨ */
+      /* 絕對座標內容區：強制釘死在紙張的正中央 */
       .print-content {
         position: absolute;
-        top: 10mm;    /* 距離上方絕對 1 公分 */
-        bottom: 10mm; /* 距離下方絕對 1 公分 */
-        left: 20mm;   /* 距離左方絕對 2 公分 */
-        right: 20mm;  /* 距離右方絕對 2 公分 */
+        top: 10mm;    
+        bottom: 10mm; 
+        left: 20mm;   
+        right: 20mm;  
       }
 
       /* 打洞三角形：安全釘在左側 2 公分留白區內 */
@@ -63,12 +63,12 @@
         position: absolute;
         top: 50%; 
         transform: translateY(-50%);
-        left: 6mm; /* 距離紙張絕對左邊緣 6mm */
+        left: 6mm; 
         width: 0; 
         height: 0;
         border-top: 8px solid transparent;
         border-bottom: 8px solid transparent;
-        border-right: 12px solid #cbd5e1; /* 淡淡灰色 */
+        border-right: 12px solid #cbd5e1; 
         z-index: 10;
       }
       
@@ -89,7 +89,7 @@
       
       .print-table th { background-color: #f9fafb; font-weight: normal; }
       .print-table thead th { height: 35px; }
-      .category-title { height: 35px; }
+      .category-title { height: 35px; font-weight: bold; } /* ✨ 標題列印樣式加粗 ✨ */
       
       .col-grid { width: 8%; }
       .col-name { width: 18%; }
@@ -539,14 +539,14 @@
           page.classList.add('last-page');
         }
         
-        // ✨ 僅在第一頁 (w === 0) 加上打洞標記 ✨
+        // 僅第一頁產生打洞標記
         if (w === 0) {
           const punchHole = document.createElement('div');
           punchHole.className = 'punch-mark';
           page.appendChild(punchHole);
         }
         
-        // 建立絕對定位的內容容器
+        // 絕對定位的內容容器
         const contentWrap = document.createElement('div');
         contentWrap.className = 'print-content';
         
@@ -573,7 +573,8 @@
         `;
 
         const instruments = items.filter(i => i['類別'] === '器械');
-        tableHTML += `<tr><td colspan="8" class="category-title" style="font-size: 13pt; letter-spacing: 1em;">器械</td></tr>`;
+        // ✨ 加入 font-weight: bold; 讓大標題變成粗體 ✨
+        tableHTML += `<tr><td colspan="8" class="category-title" style="font-size: 13pt; font-weight: bold; letter-spacing: 1em;">器械</td></tr>`;
         
         let currentGrid = null;
         let gridSpan = 0;
@@ -595,7 +596,8 @@
         });
 
         const others = items.filter(i => i['類別'] === '其他品項' || i['類別'] === '其他');
-        tableHTML += `<tr><td colspan="8" class="category-title" style="font-size: 13pt; letter-spacing: 1em;">其他品項</td></tr>`;
+        // ✨ 加入 font-weight: bold; 讓大標題變成粗體 ✨
+        tableHTML += `<tr><td colspan="8" class="category-title" style="font-size: 13pt; font-weight: bold; letter-spacing: 1em;">其他品項</td></tr>`;
         
         others.forEach(item => {
            tableHTML += `<tr>
@@ -624,7 +626,7 @@
 
     window.onload = function() {
       initDate();
-      loadData(document.getElementById('refresh-btn'));
+      loadData();
     };
   </script>
 </body>
