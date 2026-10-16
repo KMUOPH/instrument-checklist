@@ -126,6 +126,7 @@
       </div>
     </div>
 
+    <!-- 編輯區標題與右側重整按鈕 -->
     <div class="flex items-center gap-2 mb-3 select-none">
       <span id="editor-toggle-icon" class="text-gray-400 transform transition-transform duration-200 text-sm cursor-pointer" onclick="toggleEditor()">▶</span>
       <h2 class="text-lg font-bold text-gray-800 cursor-pointer" onclick="toggleEditor()">品項編輯區</h2>
@@ -143,13 +144,14 @@
     <div id="editor-content" class="hidden">
       <div class="overflow-x-auto pb-4">
         <table class="w-full border-collapse border border-gray-300 text-xs">
-          <thead class="bg-gray-200">
+          <thead class="bg-gray-200 text-gray-700">
+            <!-- ✨ 修正：將表頭的 padding (p-1) 改為 (py-1 px-1) 使高度與分類列完美一致 ✨ -->
             <tr>
-              <th class="border p-1 w-14">類別</th>
-              <th class="border p-1 w-10">編號</th>
-              <th class="border p-1 w-24">品項名稱</th>
-              <th class="border p-1 w-12">數量</th>
-              <th class="border p-1 w-32">操作</th>
+              <th class="border py-1 px-1 w-14 font-bold">類別</th>
+              <th class="border py-1 px-1 w-10 font-bold">編號</th>
+              <th class="border py-1 px-1 w-24 font-bold">品項名稱</th>
+              <th class="border py-1 px-1 w-12 font-bold">數量</th>
+              <th class="border py-1 px-1 w-32 font-bold">操作</th>
             </tr>
           </thead>
           <tbody id="editor-tbody">
@@ -431,7 +433,6 @@
         const currentGrid = String(item['編號'] || '').trim();
         const currentCat = String(item['類別'] || '').trim();
         
-        // ✨ 修正：縮小高度、縮小字體、減小字距 ✨
         if (currentCat !== prevCat) {
           const separatorTr = document.createElement('tr');
           separatorTr.className = "bg-blue-50 border-y border-blue-200";
