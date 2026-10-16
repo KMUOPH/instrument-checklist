@@ -25,45 +25,40 @@
     }
     
     /* ==================================================
-       列印模式：【絕對座標定位法】保證每一頁 100% 一模一樣
+       列印模式：終極物理尺寸暴力鎖死法 (每一頁皆完全相同)
        ================================================== */
     @media print {
       html, body { background-color: white; padding: 0 !important; margin: 0 !important; width: 100%; height: 100%; }
       #ui-area { display: none !important; }
       #print-area { display: block; width: 100%; margin: 0; padding: 0; }
       
-      /* 徹底關閉瀏覽器預設邊界，消滅頁首頁尾 */
       @page { size: A4; margin: 0mm !important; } 
       
-      /* 實體 A4 畫布：每一頁獨立鎖死尺寸，防止溢出 */
       .print-page {
         width: 210mm !important;
-        height: 296.5mm !important; 
-        position: relative; 
+        height: 297mm !important; 
+        max-height: 297mm !important;
+        box-sizing: border-box !important;
+        padding: 10mm 20mm !important;
+        position: relative;
         page-break-after: always;
         page-break-inside: avoid;
         overflow: hidden; 
-        background-color: white;
+        
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
       }
       .print-page.last-page {
         page-break-after: auto; 
       }
 
-      /* 絕對座標內容區：強制釘死在紙張的正中央 */
-      .print-content {
-        position: absolute;
-        top: 10mm;    
-        bottom: 10mm; 
-        left: 20mm;   
-        right: 20mm;  
-      }
-
-      /* 打洞三角形：安全釘在左側 2 公分留白區內 */
       .punch-mark {
         position: absolute;
         top: 50%; 
         transform: translateY(-50%);
-        left: 6mm; 
+        left: 8mm; 
         width: 0; 
         height: 0;
         border-top: 8px solid transparent;
@@ -72,13 +67,15 @@
         z-index: 10;
       }
       
-      /* 表格自動填滿絕對座標區域 */
       .print-table { 
-        width: 100%; 
-        height: 100%; 
+        width: 170mm !important; 
+        height: 277mm !important; 
+        max-width: 170mm !important;
+        max-height: 277mm !important;
         border-collapse: collapse; 
         table-layout: fixed; 
         font-size: 12pt; 
+        margin: 0 auto; 
       }
       
       .print-table th, .print-table td { 
@@ -89,7 +86,7 @@
       
       .print-table th { background-color: #f9fafb; font-weight: normal; }
       .print-table thead th { height: 35px; }
-      .category-title { height: 35px; font-weight: bold; } /* ✨ 標題列印樣式加粗 ✨ */
+      .category-title { height: 35px; font-weight: bold; }
       
       .col-grid { width: 8%; }
       .col-name { width: 18%; }
@@ -168,13 +165,16 @@
                 </select>
               </td>
               <td class="border p-1">
-                <input type="text" id="new-grid" class="w-full p-1 border rounded text-center font-bold text-blue-600 text-xs" placeholder="1">
+                <!-- ✨ 加入 onfocus="this.select()" 點擊全選 ✨ -->
+                <input type="text" id="new-grid" class="w-full p-1 border rounded text-center font-bold text-blue-600 text-xs" placeholder="1" onfocus="this.select()">
               </td>
               <td class="border p-1">
-                <input type="text" id="new-name" class="w-full p-1 border rounded text-xs" placeholder="名稱">
+                <!-- ✨ 加入 onfocus="this.select()" 點擊全選 ✨ -->
+                <input type="text" id="new-name" class="w-full p-1 border rounded text-xs" placeholder="名稱" onfocus="this.select()">
               </td>
               <td class="border p-1">
-                <input type="number" id="new-qty" class="w-full p-1 border rounded text-center text-xs" placeholder="數量">
+                <!-- ✨ 加入 onfocus="this.select()" 點擊全選 ✨ -->
+                <input type="number" id="new-qty" class="w-full p-1 border rounded text-center text-xs" placeholder="數量" onfocus="this.select()">
               </td>
               <td class="border p-1">
                 <div class="flex justify-center items-center gap-1">
@@ -432,7 +432,7 @@
       let prevGrid = null;
 
       items.forEach((item, index) => {
-        // ✨ 修正：強制轉為字串並去除空白，解決數字 15 與文字 "15" 判斷失敗的問題
+        // ✨ 修正數字與文字格式轉換的問題 ✨
         const currentGrid = String(item['編號'] || '').trim();
         const currentCat = String(item['類別'] || '').trim();
         
@@ -453,9 +453,9 @@
                 <option value="其他品項" ${item['類別']==='其他品項'?'selected':''}>其他品項</option>
               </select>
             </td>
-            <td class="border p-1"><input type="text" id="edit-grid-${index}" value="${currentGrid}" class="w-full text-center p-1 border rounded text-xs"></td>
-            <td class="border p-1"><input type="text" id="edit-name-${index}" value="${item['品項']}" class="w-full p-1 border rounded text-xs"></td>
-            <td class="border p-1"><input type="number" id="edit-qty-${index}" value="${item['數量']}" class="w-full text-center p-1 border rounded text-xs"></td>
+            <td class="border p-1"><input type="text" id="edit-grid-${index}" value="${currentGrid}" class="w-full text-center p-1 border rounded text-xs" onfocus="this.select()"></td>
+            <td class="border p-1"><input type="text" id="edit-name-${index}" value="${item['品項']}" class="w-full p-1 border rounded text-xs" onfocus="this.select()"></td>
+            <td class="border p-1"><input type="number" id="edit-qty-${index}" value="${item['數量']}" class="w-full text-center p-1 border rounded text-xs" onfocus="this.select()"></td>
             <td class="border p-1">
               <div class="flex justify-center items-center gap-1">
                 <button onclick="saveEdit(${index}, this)" class="bg-blue-600 text-white flex-1 py-1 rounded hover:bg-blue-700 shadow-sm text-xs font-bold whitespace-nowrap transition">儲存</button>
@@ -500,24 +500,22 @@
     
     async function saveEdit(index, btn) {
       btn.innerHTML = '處理中...'; btn.disabled = true;
-      items[index]['類別'] = document.getElementById(`edit-cat-${index}`).value;
-      const newGrid = document.getElementById(`edit-grid-${index}`).value;
-      items[index]['編號'] = newGrid; 
-      items[index]['格子編號'] = newGrid;
-      items[index]['品項'] = document.getElementById(`edit-name-${index}`).value;
-      items[index]['數量'] = document.getElementById(`edit-qty-${index}`).value;
       
-      // ✨ 修正：儲存編輯後，重新賦予排序編號並執行自動排序
+      const targetItem = items[index]; // ✨ 記錄確切的編輯物件參考 ✨
+      targetItem['類別'] = document.getElementById(`edit-cat-${index}`).value;
+      const newGrid = document.getElementById(`edit-grid-${index}`).value;
+      targetItem['編號'] = newGrid; 
+      targetItem['格子編號'] = newGrid;
+      targetItem['品項'] = document.getElementById(`edit-name-${index}`).value;
+      targetItem['數量'] = document.getElementById(`edit-qty-${index}`).value;
+      
+      // ✨ 編輯完成後自動觸發排序 ✨
       items.forEach((item, idx) => item['排序'] = idx + 1);
       doLocalSort(); 
       
       await saveData();
-      
-      // 找出編輯後的項目新位置，給予動畫提示
-      const editedItem = items.find(i => i['品項'] === document.getElementById(`edit-name-${index}`).value && i['編號'] === newGrid);
       editingIndex = -1; 
-      highlightIndex = items.indexOf(editedItem); 
-      
+      highlightIndex = items.indexOf(targetItem); // 確保正確抓取排序後的新位置
       renderEditor();
     }
 
@@ -550,16 +548,11 @@
           page.classList.add('last-page');
         }
         
-        // 僅第一頁產生打洞標記
         if (w === 0) {
           const punchHole = document.createElement('div');
           punchHole.className = 'punch-mark';
           page.appendChild(punchHole);
         }
-        
-        // 絕對定位的內容容器
-        const contentWrap = document.createElement('div');
-        contentWrap.className = 'print-content';
         
         let tableHTML = `
           <table class="print-table">
@@ -584,7 +577,6 @@
         `;
 
         const instruments = items.filter(i => i['類別'] === '器械');
-        // ✨ 加入 font-weight: bold; 讓大標題變成粗體 ✨
         tableHTML += `<tr><td colspan="8" class="category-title" style="font-size: 13pt; font-weight: bold; letter-spacing: 1em;">器械</td></tr>`;
         
         let currentGrid = null;
@@ -607,7 +599,6 @@
         });
 
         const others = items.filter(i => i['類別'] === '其他品項' || i['類別'] === '其他');
-        // ✨ 加入 font-weight: bold; 讓大標題變成粗體 ✨
         tableHTML += `<tr><td colspan="8" class="category-title" style="font-size: 13pt; font-weight: bold; letter-spacing: 1em;">其他品項</td></tr>`;
         
         others.forEach(item => {
@@ -626,9 +617,7 @@
             </tbody>
           </table>
         `;
-        
-        contentWrap.innerHTML = tableHTML;
-        page.appendChild(contentWrap);
+        page.innerHTML += tableHTML;
         printArea.appendChild(page);
       }
 
@@ -637,7 +626,7 @@
 
     window.onload = function() {
       initDate();
-      loadData();
+      loadData(document.getElementById('refresh-btn'));
     };
   </script>
 </body>
