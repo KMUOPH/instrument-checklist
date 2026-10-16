@@ -25,62 +25,57 @@
     }
     
     /* ==================================================
-       列印模式：終極物理尺寸暴力鎖死法 (每一頁皆完全相同)
+       列印模式：【絕對座標定位法】保證每一頁 100% 一模一樣
        ================================================== */
     @media print {
-      html, body { background-color: white; padding: 0; margin: 0; }
+      html, body { background-color: white; padding: 0 !important; margin: 0 !important; width: 100%; height: 100%; }
       #ui-area { display: none !important; }
       #print-area { display: block; width: 100%; margin: 0; padding: 0; }
       
-      /* ✨ 1. 徹底封殺 Chrome 預設邊界與頁首/頁尾 ✨ */
+      /* ✨ 徹底關閉瀏覽器預設邊界，消滅頁首頁尾 ✨ */
       @page { size: A4; margin: 0mm !important; } 
       
-      /* ✨ 2. 實體 A4 畫布：210mm x 297mm 絕對鎖死 ✨ */
+      /* ✨ 實體 A4 畫布：每一頁獨立鎖死尺寸，防止溢出 ✨ */
       .print-page {
         width: 210mm !important;
-        height: 297mm !important; 
-        max-height: 297mm !important;
-        box-sizing: border-box !important;
-        /* ✨ 3. 統一邊界：上下 1cm，左右 2cm ✨ */
-        padding: 10mm 20mm !important;
-        position: relative;
+        height: 296.5mm !important; /* 扣除 0.5mm 緩衝，絕對防止多印空白頁 */
+        position: relative; /* 開啟絕對定位的基準點 */
         page-break-after: always;
         page-break-inside: avoid;
         overflow: hidden; 
-        
-        /* ✨ 4. 絕對置中霸王條款：強迫內容水平垂直置中 ✨ */
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
+        background-color: white;
       }
       .print-page.last-page {
         page-break-after: auto; 
       }
 
-      /* ✨ 5. 淡淡灰色的打洞三角形 (畫在左側 20mm 留白區內) ✨ */
+      /* ✨ 絕對座標內容區：無視 Chrome 排版 Bug，強制釘死在紙張的正中央 ✨ */
+      .print-content {
+        position: absolute;
+        top: 10mm;    /* 距離上方絕對 1 公分 */
+        bottom: 10mm; /* 距離下方絕對 1 公分 */
+        left: 20mm;   /* 距離左方絕對 2 公分 */
+        right: 20mm;  /* 距離右方絕對 2 公分 */
+      }
+
+      /* 打洞三角形：安全釘在左側 2 公分留白區內 */
       .punch-mark {
         position: absolute;
         top: 50%; 
         transform: translateY(-50%);
-        left: 8mm; 
+        left: 6mm; /* 距離紙張絕對左邊緣 6mm */
         width: 0; 
         height: 0;
         border-top: 8px solid transparent;
         border-bottom: 8px solid transparent;
-        border-right: 12px solid #cbd5e1; /* 淡灰色 */
+        border-right: 12px solid #cbd5e1; /* 淡淡灰色 */
         z-index: 10;
       }
       
-      /* ✨ 6. 表格強制尺寸：自動撐滿扣掉白邊後的剩餘空間 ✨ 
-         寬度：210 - 左20 - 右20 = 170mm
-         高度：297 - 上10 - 下10 = 277mm 
-      */
+      /* 表格自動填滿絕對座標區域 */
       .print-table { 
-        width: 100% !important; 
-        height: 100% !important; 
-        max-width: 170mm !important;
-        max-height: 277mm !important;
+        width: 100%; 
+        height: 100%; 
         border-collapse: collapse; 
         table-layout: fixed; 
         font-size: 12pt; 
@@ -134,6 +129,7 @@
       </div>
     </div>
 
+    <!-- 編輯區標題與右側重整按鈕 -->
     <div class="flex items-center gap-2 mb-3 select-none">
       <span id="editor-toggle-icon" class="text-gray-400 transform transition-transform duration-200 text-sm cursor-pointer" onclick="toggleEditor()">▶</span>
       <h2 class="text-lg font-bold text-gray-800 cursor-pointer" onclick="toggleEditor()">品項編輯區</h2>
@@ -538,15 +534,16 @@
 
         const page = document.createElement('div');
         page.className = 'print-page';
+        if (w === selectedWeeks - 1) page.classList.add('last-page');
         
-        if (w === selectedWeeks - 1) {
-          page.classList.add('last-page');
-        }
-        
-        // ✨ 每一頁都產生打洞標記，因為現在每一頁都完全一模一樣 ✨
+        // 打洞標記
         const punchHole = document.createElement('div');
         punchHole.className = 'punch-mark';
         page.appendChild(punchHole);
+        
+        // ✨ 絕對定位的內容容器 ✨
+        const contentWrap = document.createElement('div');
+        contentWrap.className = 'print-content';
         
         let tableHTML = `
           <table class="print-table">
@@ -611,7 +608,8 @@
             </tbody>
           </table>
         `;
-        page.innerHTML += tableHTML;
+        contentWrap.innerHTML = tableHTML;
+        page.appendChild(contentWrap);
         printArea.appendChild(page);
       }
 
