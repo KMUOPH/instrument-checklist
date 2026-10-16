@@ -25,7 +25,7 @@
     }
     
     /* ==================================================
-       列印模式：純物理公分絕對鎖定法 (每一頁皆完全相同)
+       列印模式：終極物理尺寸暴力鎖死法 (每一頁皆完全相同)
        ================================================== */
     @media print {
       html, body { background-color: white; padding: 0 !important; margin: 0 !important; width: 100%; height: 100%; }
@@ -126,7 +126,6 @@
       </div>
     </div>
 
-    <!-- 編輯區標題與右側重整按鈕 -->
     <div class="flex items-center gap-2 mb-3 select-none">
       <span id="editor-toggle-icon" class="text-gray-400 transform transition-transform duration-200 text-sm cursor-pointer" onclick="toggleEditor()">▶</span>
       <h2 class="text-lg font-bold text-gray-800 cursor-pointer" onclick="toggleEditor()">品項編輯區</h2>
@@ -432,11 +431,11 @@
         const currentGrid = String(item['編號'] || '').trim();
         const currentCat = String(item['類別'] || '').trim();
         
-        // ✨ 更新：更有質感的分類區隔標題列 ✨
+        // ✨ 修正：縮小高度、縮小字體、減小字距 ✨
         if (currentCat !== prevCat) {
           const separatorTr = document.createElement('tr');
           separatorTr.className = "bg-blue-50 border-y border-blue-200";
-          separatorTr.innerHTML = `<td colspan="5" class="py-2 text-center font-bold text-blue-800 tracking-[0.5em] text-sm">${currentCat}</td>`;
+          separatorTr.innerHTML = `<td colspan="5" class="py-1 text-center font-bold text-blue-800 tracking-[0.2em] text-xs">${currentCat}</td>`;
           tbody.appendChild(separatorTr);
         }
 
