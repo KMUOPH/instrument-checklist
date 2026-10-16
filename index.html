@@ -25,7 +25,7 @@
     }
     
     /* ==================================================
-       列印模式：純物理公分絕對鎖定法 (放棄 Chrome 交替邊界)
+       列印模式：終極物理尺寸暴力鎖死法 (每一頁皆完全相同)
        ================================================== */
     @media print {
       html, body { background-color: white; padding: 0; margin: 0; }
@@ -41,23 +41,29 @@
         height: 297mm !important; 
         max-height: 297mm !important;
         box-sizing: border-box !important;
-        /* ✨ 終極對稱邊界：上 10, 右 20, 下 10, 左 20 ✨ */
-        padding: 10mm 20mm 10mm 20mm !important;
+        /* ✨ 3. 統一邊界：上下 1cm，左右 2cm ✨ */
+        padding: 10mm 20mm !important;
         position: relative;
         page-break-after: always;
         page-break-inside: avoid;
         overflow: hidden; 
+        
+        /* ✨ 4. 絕對置中霸王條款：強迫內容水平垂直置中 ✨ */
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
       }
       .print-page.last-page {
         page-break-after: auto; 
       }
 
-      /* ✨ 3. 淡淡灰色的打洞三角形 ✨ */
+      /* ✨ 5. 淡淡灰色的打洞三角形 (畫在左側 20mm 留白區內) ✨ */
       .punch-mark {
         position: absolute;
         top: 50%; 
         transform: translateY(-50%);
-        left: 8mm; /* 安全定位於左側 20mm 留白區的中央偏左 */
+        left: 8mm; 
         width: 0; 
         height: 0;
         border-top: 8px solid transparent;
@@ -66,19 +72,18 @@
         z-index: 10;
       }
       
-      /* ✨ 4. 終極防護：強制寫死表格寬高，逼迫邊界絕對精準 ✨ 
+      /* ✨ 6. 表格強制尺寸：自動撐滿扣掉白邊後的剩餘空間 ✨ 
          寬度：210 - 左20 - 右20 = 170mm
          高度：297 - 上10 - 下10 = 277mm 
       */
       .print-table { 
-        width: 170mm !important; 
-        height: 277mm !important; 
+        width: 100% !important; 
+        height: 100% !important; 
         max-width: 170mm !important;
         max-height: 277mm !important;
         border-collapse: collapse; 
         table-layout: fixed; 
         font-size: 12pt; 
-        margin: 0 auto; /* 確保內部絕對水平置中 */
       }
       
       .print-table th, .print-table td { 
@@ -129,12 +134,10 @@
       </div>
     </div>
 
-    <!-- ✨ 編輯區標題與右側重整按鈕 ✨ -->
     <div class="flex items-center gap-2 mb-3 select-none">
       <span id="editor-toggle-icon" class="text-gray-400 transform transition-transform duration-200 text-sm cursor-pointer" onclick="toggleEditor()">▶</span>
       <h2 class="text-lg font-bold text-gray-800 cursor-pointer" onclick="toggleEditor()">品項編輯區</h2>
       
-      <!-- 重整按鈕移至最右側 -->
       <div class="ml-auto">
         <button id="refresh-btn" onclick="loadData()" class="w-7 h-7 flex items-center justify-center bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-full transition shadow-sm" title="重新載入/同步">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -266,7 +269,6 @@
       }
     }
 
-    // ✨ 控制旋轉動畫的共用函數 ✨
     function setSpinning(isSpinning) {
       const btn = document.getElementById('refresh-btn');
       if (!btn) return;
@@ -356,8 +358,6 @@
       doLocalSort(); 
       
       const newIndex = items.indexOf(sourceItem);
-      
-      // 不要在這裡等待 saveData 完成才重繪畫面，先重繪提供流暢體驗，背景非同步存檔即可
       saveData(); 
       
       highlightIndex = newIndex; 
@@ -543,12 +543,10 @@
           page.classList.add('last-page');
         }
         
-        // 僅第一頁產生打洞標記
-        if (w === 0) {
-          const punchHole = document.createElement('div');
-          punchHole.className = 'punch-mark';
-          page.appendChild(punchHole);
-        }
+        // ✨ 每一頁都產生打洞標記，因為現在每一頁都完全一模一樣 ✨
+        const punchHole = document.createElement('div');
+        punchHole.className = 'punch-mark';
+        page.appendChild(punchHole);
         
         let tableHTML = `
           <table class="print-table">
