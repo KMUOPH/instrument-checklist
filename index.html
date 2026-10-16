@@ -15,57 +15,65 @@
       #print-area { display: none; }
     }
     
-    /* 成功特效動畫 (改為更深的靛藍色) */
+    /* 成功特效動畫 */
     @keyframes highlightFade {
       0% { background-color: #c7d2fe; } /* indigo-200 */
       100% { background-color: transparent; }
     }
+    /* 動畫期間強制套用背景色，不受 hover 干擾 */
     .highlight-row {
-      animation: highlightFade 1.2s ease-out;
+      animation: highlightFade 1.2s ease-out forwards;
     }
     
-    /* 列印模式 */
+    /* ==================================================
+       列印模式：終極零誤差排版
+       ================================================== */
     @media print {
       html, body { background-color: white; padding: 0; margin: 0; }
       #ui-area { display: none !important; }
       #print-area { display: block; width: 100%; }
       
-      /* ✨ 終極對稱邊界設定：交給瀏覽器原生處理 ✨ */
-      /* 預設邊界 (通常套用於奇數/右頁) */
-      @page { size: A4; margin: 10mm 10mm 10mm 20mm; } 
-      /* 偶數頁(背)：右側裝訂 20mm */
-      @page :left { margin: 10mm 20mm 10mm 10mm; }
-      /* 奇數頁(正)：左側裝訂 20mm */
-      @page :right { margin: 10mm 10mm 10mm 20mm; }
+      /* ✨ 1. 徹底封殺 Chrome 預設邊界與頁首/頁尾 ✨ */
+      @page { size: A4; margin: 0mm !important; } 
       
-      /* 單頁容器：使用 98vh 自動充滿當前列印頁面，不寫死絕對公分 */
+      /* ✨ 2. 實體 A4 畫布，接管所有排版 ✨ */
       .print-page {
-        width: 100%;
-        height: 98.5vh; 
+        width: 210mm;
+        height: 297mm; /* 絕對鎖定 A4 高度 */
+        box-sizing: border-box;
         position: relative;
         page-break-after: always;
         page-break-inside: avoid;
+        overflow: hidden; /* 防止任何內容溢出產生空白頁 */
       }
       .print-page.last-page {
         page-break-after: auto; 
       }
 
-      /* ✨ 加大的打洞對齊小三角形 ✨ */
+      /* 
+         ✨ 3. 利用 Padding 繪製精準白邊 (上下永遠 10mm，左右自動對稱) 
+         這樣表格的高度自動就是 297 - 10 - 10 = 277mm，保證絕對置中！
+      */
+      /* 奇數頁：左側裝訂 20mm */
+      .page-odd { padding: 10mm 10mm 10mm 20mm; }
+      /* 偶數頁：右側裝訂 20mm */
+      .page-even { padding: 10mm 20mm 10mm 10mm; }
+
+      /* ✨ 4. 加大版打洞三角形 (畫在 padding 留白區內，保證不被裁切) */
       .punch-mark {
         position: absolute;
         top: 50%; 
         transform: translateY(-50%);
-        /* 定位在左側原生 20mm 邊界內 */
-        left: -16mm; 
+        left: 6mm; /* 距離紙張左邊緣 0.6 公分 */
         width: 0; 
         height: 0;
-        /* 加大三角形尺寸 */
-        border-top: 8px solid transparent;
-        border-bottom: 8px solid transparent;
-        border-right: 10px solid #d1d5db; 
+        /* 加大的三角形，尖角朝左 ◀ */
+        border-top: 7px solid transparent;
+        border-bottom: 7px solid transparent;
+        border-right: 10px solid #9ca3af; /* 灰色 */
       }
       
-      /* 表格直接撐滿容器 */
+      /* 表格設定：自動撐滿扣掉白邊後的剩餘空間 */
       .print-table { 
         width: 100%; 
         height: 100%; 
@@ -88,14 +96,13 @@
       .col-name { width: 18%; }
       .col-qty { width: 10%; }
       
-      /* 簽名欄高度 */
       .signature-row td { height: 60px; vertical-align: middle; padding-bottom: 0;}
     }
   </style>
 </head>
 <body class="bg-gray-100 p-4">
 
-  <!-- ================= 操作介面區 ================= -->
+  <!-- ================= 系統操作介面區 ================= -->
   <div id="ui-area" class="max-w-xl mx-auto bg-white p-5 rounded-lg shadow-md">
     
     <div class="flex items-center justify-between mb-4">
@@ -128,50 +135,56 @@
       </div>
     </div>
 
-    <div class="flex items-end gap-3 mb-3">
+    <!-- ✨ 可折疊的編輯區標題 ✨ -->
+    <div class="flex items-center gap-2 mb-3 cursor-pointer select-none" onclick="toggleEditor()">
+      <span id="editor-toggle-icon" class="text-gray-400 transform transition-transform duration-200 text-sm">▶</span>
       <h2 class="text-lg font-bold text-gray-800">品項編輯區</h2>
+      <span id="status-msg" class="ml-auto text-[10px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full border-transparent">讀取中...</span>
     </div>
 
-    <div class="overflow-x-auto">
-      <table class="w-full border-collapse border border-gray-300 text-xs">
-        <thead class="bg-gray-200">
-          <tr>
-            <th class="border p-1 w-14">類別</th>
-            <th class="border p-1 w-10">編號</th>
-            <th class="border p-1 w-24">品項名稱</th>
-            <th class="border p-1 w-12">數量</th>
-            <th class="border p-1 w-32">操作</th>
-          </tr>
-        </thead>
-        <tbody id="editor-tbody">
-          <!-- 資料由 JS 動態產生 -->
-        </tbody>
-        <tfoot class="bg-gray-100 border-t-2 border-gray-300">
-          <tr>
-            <td class="border p-1">
-              <select id="new-cat" onchange="handleCatChange()" class="w-full p-1 border rounded text-center text-xs font-bold text-gray-700">
-                <option value="器械">器械</option>
-                <option value="其他品項">其他品項</option>
-              </select>
-            </td>
-            <td class="border p-1">
-              <input type="text" id="new-grid" class="w-full p-1 border rounded text-center font-bold text-blue-600 text-xs" placeholder="1">
-            </td>
-            <td class="border p-1">
-              <input type="text" id="new-name" class="w-full p-1 border rounded text-xs" placeholder="名稱">
-            </td>
-            <td class="border p-1">
-              <input type="number" id="new-qty" class="w-full p-1 border rounded text-center text-xs" placeholder="數量">
-            </td>
-            <td class="border p-1">
-              <div class="flex justify-center items-center gap-1">
-                <button id="btn-add" onclick="addItem(this)" class="bg-blue-600 text-white flex-1 py-1 rounded hover:bg-blue-700 transition shadow-sm font-bold text-xs whitespace-nowrap">新增</button>
-                <button id="btn-sort" onclick="autoSort(this)" class="bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 font-bold flex-1 py-1 rounded transition shadow-sm whitespace-nowrap text-xs" title="排序">排序</button>
-              </div>
-            </td>
-          </tr>
-        </tfoot>
-      </table>
+    <!-- ✨ 編輯區容器 (預設隱藏) ✨ -->
+    <div id="editor-content" class="hidden">
+      <div class="overflow-x-auto pb-4">
+        <table class="w-full border-collapse border border-gray-300 text-xs">
+          <thead class="bg-gray-200">
+            <tr>
+              <th class="border p-1 w-14">類別</th>
+              <th class="border p-1 w-10">編號</th>
+              <th class="border p-1 w-24">品項名稱</th>
+              <th class="border p-1 w-12">數量</th>
+              <th class="border p-1 w-32">操作</th>
+            </tr>
+          </thead>
+          <tbody id="editor-tbody">
+            <!-- 資料由 JS 動態產生 -->
+          </tbody>
+          <tfoot class="bg-gray-100 border-t-2 border-gray-300">
+            <tr>
+              <td class="border p-1">
+                <select id="new-cat" onchange="handleCatChange()" class="w-full p-1 border rounded text-center text-xs font-bold text-gray-700">
+                  <option value="器械">器械</option>
+                  <option value="其他品項">其他品項</option>
+                </select>
+              </td>
+              <td class="border p-1">
+                <input type="text" id="new-grid" class="w-full p-1 border rounded text-center font-bold text-blue-600 text-xs" placeholder="1">
+              </td>
+              <td class="border p-1">
+                <input type="text" id="new-name" class="w-full p-1 border rounded text-xs" placeholder="名稱">
+              </td>
+              <td class="border p-1">
+                <input type="number" id="new-qty" class="w-full p-1 border rounded text-center text-xs" placeholder="數量">
+              </td>
+              <td class="border p-1">
+                <div class="flex justify-center items-center gap-1">
+                  <button id="btn-add" onclick="addItem(this)" class="bg-blue-600 text-white flex-1 py-1 rounded hover:bg-blue-700 transition shadow-sm font-bold text-xs whitespace-nowrap">新增</button>
+                  <button id="btn-sort" onclick="autoSort(this)" class="bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 font-bold flex-1 py-1 rounded transition shadow-sm whitespace-nowrap text-xs" title="排序">排序</button>
+                </div>
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -218,6 +231,31 @@
       });
     }
 
+    // ✨ 控制編輯區折疊/展開 ✨
+    function toggleEditor() {
+      const content = document.getElementById('editor-content');
+      const icon = document.getElementById('editor-toggle-icon');
+      if(content.classList.contains('hidden')) {
+        content.classList.remove('hidden');
+        icon.style.transform = 'rotate(90deg)';
+      } else {
+        content.classList.add('hidden');
+        icon.style.transform = 'rotate(0deg)';
+      }
+    }
+
+    function setStatus(msg, isError = false) {
+      const el = document.getElementById('status-msg');
+      el.innerText = msg;
+      if(isError) {
+        el.className = "ml-auto text-[10px] font-medium text-red-600 bg-red-50 border px-2 py-0.5 rounded-full border-red-200";
+      } else if (msg === '已同步') {
+        el.className = "ml-auto text-[10px] font-medium text-green-700 bg-green-50 border px-2 py-0.5 rounded-full border-green-200";
+      } else {
+        el.className = "ml-auto text-[10px] font-medium text-gray-500 bg-gray-100 border px-2 py-0.5 rounded-full border-transparent";
+      }
+    }
+
     function handleCatChange() {
       const cat = document.getElementById('new-cat').value;
       const gridInp = document.getElementById('new-grid');
@@ -240,6 +278,7 @@
     }
 
     async function loadData(btn) {
+      setStatus("載入中...");
       let svg = btn ? btn.querySelector('svg') : null;
       if(svg) svg.classList.add('animate-spin');
       try {
@@ -252,17 +291,19 @@
           item['格子編號'] = val;
           return item;
         });
-        doLocalSort(); // 載入時確保排序正確
+        doLocalSort(); 
         editingIndex = -1; highlightIndex = -1;
         renderEditor(); handleCatChange(); 
+        setStatus("已同步");
       } catch (error) {
-        console.error(error); alert("載入失敗");
+        console.error(error); setStatus("載入失敗", true);
       } finally {
         if(svg) svg.classList.remove('animate-spin');
       }
     }
 
     async function saveData() {
+      setStatus("儲存中...");
       items.forEach((item, index) => item['排序'] = index + 1);
       try {
         await fetch(SCRIPT_URL, {
@@ -270,32 +311,30 @@
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify(items)
         });
+        setStatus("已同步");
       } catch (error) {
-        console.error(error); alert("同步失敗");
+        console.error(error); setStatus("同步失敗", true);
       }
     }
 
     async function moveItem(index, direction) {
       if (index + direction < 0 || index + direction >= items.length) return;
       
+      // ✨ 點擊當下，立刻強制覆蓋為靛藍色 (移除 hover 干擾) ✨
       const tr = document.getElementById(`row-${index}`);
-      if(tr) {
-         tr.classList.add('bg-indigo-200');
-         tr.style.opacity = '0.7';
-      }
+      if(tr) tr.className = 'bg-indigo-200 transition-colors duration-300';
 
       const sourceItem = items[index];
       const targetItem = items[index + direction];
       
       if (sourceItem['類別'] !== targetItem['類別']) {
-         if(tr) { tr.classList.remove('bg-indigo-200'); tr.style.opacity = '1'; }
+         renderEditor(); // 若無效操作，直接恢復
          return; 
       }
 
       const sourceGrid = sourceItem['編號'] || '';
       const targetGrid = targetItem['編號'] || '';
 
-      // 執行交換
       if (sourceGrid === targetGrid) {
         [items[index], items[index + direction]] = [items[index + direction], items[index]];
       } else {
@@ -316,9 +355,7 @@
         }
       }
 
-      // ✨ 關鍵修正：強制重新賦予連續排序號碼，讓同編號內的順序交換能被 doLocalSort() 記住
       items.forEach((item, idx) => item['排序'] = idx + 1);
-
       doLocalSort(); 
       
       const newIndex = items.indexOf(sourceItem);
@@ -369,7 +406,6 @@
       };
       items.push(newItem);
       
-      // ✨ 關鍵：新增完立即呼叫排序，歸位！
       items.forEach((item, idx) => item['排序'] = idx + 1);
       doLocalSort();
       
@@ -386,7 +422,7 @@
     async function deleteItem(index) { 
       if(confirm('確定要刪除此品項嗎？')) {
         const tr = document.getElementById(`row-${index}`);
-        if(tr) { tr.style.opacity = '0.3'; tr.classList.add('bg-red-50'); } 
+        if(tr) tr.className = 'bg-red-100 opacity-50 transition-all duration-300'; 
         items.splice(index, 1); 
         await saveData(); 
         renderEditor(); 
@@ -397,7 +433,6 @@
       const tbody = document.getElementById('editor-tbody');
       tbody.innerHTML = '';
       
-      // 記錄前一列的資訊，用來判斷同編號變灰
       let prevCat = null;
       let prevGrid = null;
 
@@ -405,9 +440,9 @@
         const currentGrid = item['編號'] || '';
         const currentCat = item['類別'];
         
-        // ✨ 同編號視覺淡化邏輯 ✨
+        // ✨ 同編號視覺隱藏邏輯：如果是同組的後續項目，直接留白 ✨
         const isSameGroup = (currentCat === prevCat && currentGrid === prevGrid && currentGrid !== '');
-        const gridColorClass = isSameGroup ? 'text-gray-400 font-normal' : 'text-blue-600 font-bold';
+        const displayGrid = isSameGroup ? '' : currentGrid;
 
         const tr = document.createElement('tr');
         tr.id = `row-${index}`;
@@ -434,10 +469,11 @@
             </td>
           `;
         } else {
-          tr.className = isHighlight ? "highlight-row transition-colors" : "hover:bg-gray-50 transition-colors";
+          // 若有 highlight 特效，就不套用 hover，避免滑鼠移動干擾動畫
+          tr.className = isHighlight ? "highlight-row" : "hover:bg-gray-50 transition-colors duration-200";
           tr.innerHTML = `
             <td class="border p-1 text-center text-gray-700 text-xs">${currentCat}</td>
-            <td class="border p-1 text-center text-sm ${gridColorClass}">${currentGrid}</td>
+            <td class="border p-1 text-center font-bold text-blue-600 text-sm">${displayGrid}</td>
             <td class="border p-1 text-xs truncate max-w-[120px]">${item['品項']}</td>
             <td class="border p-1 text-center font-bold text-xs">${item['數量']}</td>
             <td class="border p-1">
@@ -504,7 +540,9 @@
         }
 
         const page = document.createElement('div');
-        page.className = 'print-page';
+        
+        const isOddPage = (w % 2 === 0);
+        page.className = 'print-page ' + (isOddPage ? 'page-odd' : 'page-even');
         
         if (w === selectedWeeks - 1) {
           page.classList.add('last-page');
