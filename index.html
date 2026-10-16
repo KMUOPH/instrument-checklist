@@ -25,7 +25,7 @@
     }
     
     /* ==================================================
-       列印模式：純物理公分絕對鎖定法
+       列印模式：純物理公分絕對鎖定法 (放棄 Chrome 交替邊界)
        ================================================== */
     @media print {
       html, body { background-color: white; padding: 0; margin: 0; }
@@ -41,6 +41,8 @@
         height: 297mm !important; 
         max-height: 297mm !important;
         box-sizing: border-box !important;
+        /* ✨ 終極對稱邊界：上 10, 右 20, 下 10, 左 20 ✨ */
+        padding: 10mm 20mm 10mm 20mm !important;
         position: relative;
         page-break-after: always;
         page-break-inside: avoid;
@@ -50,38 +52,33 @@
         page-break-after: auto; 
       }
 
-      /* ✨ 3. 裝訂邊界控制：絕對不會再偏移 ✨ */
-      /* 奇數頁：左 20mm, 右 10mm */
-      .page-odd { padding: 10mm 10mm 10mm 20mm !important; }
-      /* 偶數頁：左 10mm, 右 20mm */
-      .page-even { padding: 10mm 20mm 10mm 10mm !important; }
-
-      /* ✨ 4. 淡淡灰色的打洞三角形 ✨ */
+      /* ✨ 3. 淡淡灰色的打洞三角形 ✨ */
       .punch-mark {
         position: absolute;
         top: 50%; 
         transform: translateY(-50%);
-        left: 5mm; /* 距離紙張左物理邊緣 5mm */
+        left: 8mm; /* 安全定位於左側 20mm 留白區的中央偏左 */
         width: 0; 
         height: 0;
         border-top: 8px solid transparent;
         border-bottom: 8px solid transparent;
-        border-right: 12px solid #cbd5e1; /* 淡灰色，大小適中 */
+        border-right: 12px solid #cbd5e1; /* 淡灰色 */
         z-index: 10;
       }
       
-      /* ✨ 5. 終極防護：強制寫死表格寬高，逼迫邊界絕對精準 ✨ 
-         寬度：210 - 20 - 10 = 180mm
-         高度：297 - 10 - 10 = 277mm 
+      /* ✨ 4. 終極防護：強制寫死表格寬高，逼迫邊界絕對精準 ✨ 
+         寬度：210 - 左20 - 右20 = 170mm
+         高度：297 - 上10 - 下10 = 277mm 
       */
       .print-table { 
-        width: 180mm !important; 
+        width: 170mm !important; 
         height: 277mm !important; 
-        max-width: 180mm !important;
+        max-width: 170mm !important;
         max-height: 277mm !important;
         border-collapse: collapse; 
         table-layout: fixed; 
         font-size: 12pt; 
+        margin: 0 auto; /* 確保內部絕對水平置中 */
       }
       
       .print-table th, .print-table td { 
@@ -132,19 +129,19 @@
       </div>
     </div>
 
-    <!-- ✨ 編輯區標題與重整按鈕 ✨ -->
+    <!-- ✨ 編輯區標題與右側重整按鈕 ✨ -->
     <div class="flex items-center gap-2 mb-3 select-none">
       <span id="editor-toggle-icon" class="text-gray-400 transform transition-transform duration-200 text-sm cursor-pointer" onclick="toggleEditor()">▶</span>
       <h2 class="text-lg font-bold text-gray-800 cursor-pointer" onclick="toggleEditor()">品項編輯區</h2>
       
-      <!-- 重整按鈕移至此處 -->
-      <button onclick="loadData(this)" class="ml-1 w-6 h-6 flex items-center justify-center bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-full transition shadow-sm" title="重新載入">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-        </svg>
-      </button>
-
-      <span id="status-msg" class="ml-auto text-[10px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full border-transparent">讀取中...</span>
+      <!-- 重整按鈕移至最右側 -->
+      <div class="ml-auto">
+        <button id="refresh-btn" onclick="loadData()" class="w-7 h-7 flex items-center justify-center bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-full transition shadow-sm" title="重新載入/同步">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </button>
+      </div>
     </div>
 
     <!-- 編輯區容器 (預設隱藏) -->
@@ -248,18 +245,6 @@
       }
     }
 
-    function setStatus(msg, isError = false) {
-      const el = document.getElementById('status-msg');
-      el.innerText = msg;
-      if(isError) {
-        el.className = "ml-auto text-[10px] font-medium text-red-600 bg-red-50 border px-2 py-0.5 rounded-full border-red-200";
-      } else if (msg === '已同步') {
-        el.className = "ml-auto text-[10px] font-medium text-green-700 bg-green-50 border px-2 py-0.5 rounded-full border-green-200";
-      } else {
-        el.className = "ml-auto text-[10px] font-medium text-gray-500 bg-gray-100 border px-2 py-0.5 rounded-full border-transparent";
-      }
-    }
-
     function handleCatChange() {
       const cat = document.getElementById('new-cat').value;
       const gridInp = document.getElementById('new-grid');
@@ -281,10 +266,19 @@
       }
     }
 
-    async function loadData(btn) {
-      setStatus("載入中...");
-      let svg = btn ? btn.querySelector('svg') : null;
-      if(svg) svg.classList.add('animate-spin');
+    // ✨ 控制旋轉動畫的共用函數 ✨
+    function setSpinning(isSpinning) {
+      const btn = document.getElementById('refresh-btn');
+      if (!btn) return;
+      const svg = btn.querySelector('svg');
+      if (svg) {
+        if (isSpinning) svg.classList.add('animate-spin');
+        else svg.classList.remove('animate-spin');
+      }
+    }
+
+    async function loadData() {
+      setSpinning(true);
       try {
         const response = await fetch(SCRIPT_URL);
         const data = await response.json();
@@ -298,16 +292,15 @@
         doLocalSort(); 
         editingIndex = -1; highlightIndex = -1;
         renderEditor(); handleCatChange(); 
-        setStatus("已同步");
       } catch (error) {
-        console.error(error); setStatus("載入失敗", true);
+        console.error(error); alert("載入失敗");
       } finally {
-        if(svg) svg.classList.remove('animate-spin');
+        setSpinning(false);
       }
     }
 
     async function saveData() {
-      setStatus("儲存中...");
+      setSpinning(true);
       items.forEach((item, index) => item['排序'] = index + 1);
       try {
         await fetch(SCRIPT_URL, {
@@ -315,9 +308,10 @@
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify(items)
         });
-        setStatus("已同步");
       } catch (error) {
-        console.error(error); setStatus("同步失敗", true);
+        console.error(error); alert("同步失敗");
+      } finally {
+        setSpinning(false);
       }
     }
 
@@ -362,7 +356,9 @@
       doLocalSort(); 
       
       const newIndex = items.indexOf(sourceItem);
-      await saveData(); 
+      
+      // 不要在這裡等待 saveData 完成才重繪畫面，先重繪提供流暢體驗，背景非同步存檔即可
+      saveData(); 
       
       highlightIndex = newIndex; 
       renderEditor(); 
@@ -541,14 +537,13 @@
         }
 
         const page = document.createElement('div');
-        
-        const isOddPage = (w % 2 === 0);
-        page.className = 'print-page ' + (isOddPage ? 'page-odd' : 'page-even');
+        page.className = 'print-page';
         
         if (w === selectedWeeks - 1) {
           page.classList.add('last-page');
         }
         
+        // 僅第一頁產生打洞標記
         if (w === 0) {
           const punchHole = document.createElement('div');
           punchHole.className = 'punch-mark';
@@ -627,7 +622,7 @@
 
     window.onload = function() {
       initDate();
-      loadData(document.querySelector('button[title="重新載入"]'));
+      loadData();
     };
   </script>
 </body>
