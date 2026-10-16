@@ -165,15 +165,12 @@
                 </select>
               </td>
               <td class="border p-1">
-                <!-- ✨ 加入 onfocus="this.select()" 點擊全選 ✨ -->
                 <input type="text" id="new-grid" class="w-full p-1 border rounded text-center font-bold text-blue-600 text-xs" placeholder="1" onfocus="this.select()">
               </td>
               <td class="border p-1">
-                <!-- ✨ 加入 onfocus="this.select()" 點擊全選 ✨ -->
                 <input type="text" id="new-name" class="w-full p-1 border rounded text-xs" placeholder="名稱" onfocus="this.select()">
               </td>
               <td class="border p-1">
-                <!-- ✨ 加入 onfocus="this.select()" 點擊全選 ✨ -->
                 <input type="number" id="new-qty" class="w-full p-1 border rounded text-center text-xs" placeholder="數量" onfocus="this.select()">
               </td>
               <td class="border p-1">
@@ -432,10 +429,17 @@
       let prevGrid = null;
 
       items.forEach((item, index) => {
-        // ✨ 修正數字與文字格式轉換的問題 ✨
         const currentGrid = String(item['編號'] || '').trim();
         const currentCat = String(item['類別'] || '').trim();
         
+        // ✨ 新增：分類區隔標題列 ✨
+        if (currentCat !== prevCat) {
+          const separatorTr = document.createElement('tr');
+          separatorTr.className = "bg-slate-200 border-y-2 border-slate-300";
+          separatorTr.innerHTML = `<td colspan="5" class="py-1.5 text-center font-bold text-slate-700 tracking-[1em] text-sm shadow-inner">${currentCat}</td>`;
+          tbody.appendChild(separatorTr);
+        }
+
         const isSameGroup = (currentCat === prevCat && currentGrid === prevGrid && currentGrid !== '');
         const displayGrid = isSameGroup ? '' : currentGrid;
 
@@ -501,7 +505,7 @@
     async function saveEdit(index, btn) {
       btn.innerHTML = '處理中...'; btn.disabled = true;
       
-      const targetItem = items[index]; // ✨ 記錄確切的編輯物件參考 ✨
+      const targetItem = items[index]; 
       targetItem['類別'] = document.getElementById(`edit-cat-${index}`).value;
       const newGrid = document.getElementById(`edit-grid-${index}`).value;
       targetItem['編號'] = newGrid; 
@@ -509,13 +513,12 @@
       targetItem['品項'] = document.getElementById(`edit-name-${index}`).value;
       targetItem['數量'] = document.getElementById(`edit-qty-${index}`).value;
       
-      // ✨ 編輯完成後自動觸發排序 ✨
       items.forEach((item, idx) => item['排序'] = idx + 1);
       doLocalSort(); 
       
       await saveData();
       editingIndex = -1; 
-      highlightIndex = items.indexOf(targetItem); // 確保正確抓取排序後的新位置
+      highlightIndex = items.indexOf(targetItem); 
       renderEditor();
     }
 
@@ -553,6 +556,9 @@
           punchHole.className = 'punch-mark';
           page.appendChild(punchHole);
         }
+        
+        const contentWrap = document.createElement('div');
+        contentWrap.className = 'print-content';
         
         let tableHTML = `
           <table class="print-table">
@@ -617,7 +623,9 @@
             </tbody>
           </table>
         `;
-        page.innerHTML += tableHTML;
+        
+        contentWrap.innerHTML = tableHTML;
+        page.appendChild(contentWrap);
         printArea.appendChild(page);
       }
 
