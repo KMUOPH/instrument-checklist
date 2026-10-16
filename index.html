@@ -534,14 +534,19 @@
 
         const page = document.createElement('div');
         page.className = 'print-page';
-        if (w === selectedWeeks - 1) page.classList.add('last-page');
         
-        // 打洞標記
-        const punchHole = document.createElement('div');
-        punchHole.className = 'punch-mark';
-        page.appendChild(punchHole);
+        if (w === selectedWeeks - 1) {
+          page.classList.add('last-page');
+        }
         
-        // ✨ 絕對定位的內容容器 ✨
+        // ✨ 僅在第一頁 (w === 0) 加上打洞標記 ✨
+        if (w === 0) {
+          const punchHole = document.createElement('div');
+          punchHole.className = 'punch-mark';
+          page.appendChild(punchHole);
+        }
+        
+        // 建立絕對定位的內容容器
         const contentWrap = document.createElement('div');
         contentWrap.className = 'print-content';
         
@@ -608,6 +613,7 @@
             </tbody>
           </table>
         `;
+        
         contentWrap.innerHTML = tableHTML;
         page.appendChild(contentWrap);
         printArea.appendChild(page);
@@ -618,7 +624,7 @@
 
     window.onload = function() {
       initDate();
-      loadData();
+      loadData(document.getElementById('refresh-btn'));
     };
   </script>
 </body>
